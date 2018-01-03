@@ -92,6 +92,8 @@ variablesFactor <- c(variablesFactor,
                      "OverallQual",    ## Rates the overall material and finish of the house
                      "OverallCond"     ## Rates the overall condition of the house
 )
+# <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
+# <-names(feature_classes[feature_classes != "character"])
 #### Data engineering
 ## In R first character can not be a number in variable names
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
@@ -103,34 +105,31 @@ changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 #### Descriptive statistics
 ## statisticts
-describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
+descStats <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
 ## na values
 countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
+countIsNA.df <- countIsNA.df[countIsNA >0,]
 ## skewness of numerical variables
-# for numeric feature with excessive skewness, perform log transformation
-# first get data type for each feature
-feature_classes <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
-numeric_feats <-names(feature_classes[feature_classes != "character"])
 # determine skew
-skewedVariables<- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
 # keep only features that exceed a threshold for skewness
 skewedVariables <- skewedVariables[skewedVariables > 0.75]
 
-# transform excessively skewed features with log(x + 1)
-#for(x in names(skewed_feats)) {
-#  all_data[[x]] <- log(all_data[[x]] + 1)
-#}
+
+
+#### Feature engineering
+# transform excessively skewed features with log
+cols <- names(skewedVariables)
+full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
+
 
 
 
 
 ## Scale data
 # full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
-
-## log SalePrice
-#full.dt <- full.dt[ , SalePriceLog := log(SalePrice)]
 
 #### Select features
 ## Response (target) variable
@@ -147,11 +146,13 @@ setkey(full.dt,"dataPartition")
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 
+h2o.init()
+
 #### Create an H2O cloud 
-h2o.connect(
-  ip = "192.168.1.215",
-  port = 54321
-) 
+#h2o.connect(
+#  ip = "192.168.1.215",
+#  port = 54321
+#) 
 ## h2o.removeAll()        ## clean slate
 
 train.hex <- as.h2o(train.dt,"train.hex")
@@ -178,7 +179,7 @@ gbm <- h2o.gbm(
   nfolds = 3,
   ntrees = 50, 
   learn_rate=0.05,
-  learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
+  #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
   sample_rate = 0.8,                   ## sample 80% of rows per tree
   col_sample_rate = 0.8,               ## sample 80% of columns per split
   stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
@@ -209,6 +210,6 @@ finalPredictions <- h2o.predict(
   object = gbm
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
-#finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.gbm.csv", force = T)
