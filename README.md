@@ -1,1 +1,1 @@
-[Go to our Wiki](https://github.com/BartBoerman/dataCave/wiki)
+[Go to Wiki](https://github.com/BartBoerman/dataCave/wiki)
