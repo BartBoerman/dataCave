@@ -1,8 +1,8 @@
-# http://www.listendata.com/2016/10/r-data-table.html
+#http://www.listendata.com/2016/10/r-data-table.html
 # http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
 require(data.table)
 require(ggplot2)
-setwd("~/Data Science/Competitions/House prices")
+setwd("~/GitHub/dataCave/kaggle-housing-prices")
 
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
