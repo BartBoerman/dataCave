@@ -15,8 +15,7 @@
 #### Dependencies
 require(data.table) # fast data wrangling
 require(h2o)        # machine learning algorithmes
-require(psych)      # descriptive statistics
-require(e1071)
+require(psych)      # descriptive statistics, skewness and kurtosis
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
