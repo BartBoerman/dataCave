@@ -120,20 +120,18 @@ skewedVariables <- skewedVariables[skewedVariables > 0.75]
 
 
 #### Feature engineering
-# transform excessively skewed features with log
+## Response (target) variable
+response <- "SalePrice"
+## transform excessively skewed features with log
 cols <- names(skewedVariables)
 full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
 
-
-
-
-
 ## Scale data
-# full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
+
+full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
 
 #### Select features
-## Response (target) variable
-response <- "SalePrice"
 ## All features
 features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
 ## Below grade?
@@ -177,8 +175,8 @@ gbm <- h2o.gbm(
   x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
   y=response,                          ## what we are predicting,alternativaly, e.g. 81
   nfolds = 3,
-  ntrees = 50, 
-  learn_rate=0.05,
+  ntrees = 40, # first do 1000, then plot, then adjust to 40
+  learn_rate=0.1,
   #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
   sample_rate = 0.8,                   ## sample 80% of rows per tree
   col_sample_rate = 0.8,               ## sample 80% of columns per split
@@ -186,6 +184,12 @@ gbm <- h2o.gbm(
   score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
   model_id = "gbm_housing_v1",         ## name the model in H2O
   seed = 333)                          ## Set the random seed for reproducability
+
+## Error after log plus scale
+#Warning message:
+#  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
+#  Dropping bad and constant columns: [BsmtFinSF2, BsmtFinSF1, PoolArea, OpenPorchSF, BsmtUnfSF, ScreenPorch, TotalBsmtSF, ThreeSsnPorch, SecondFlrSF, WoodDeckSF, LowQualFinSF, MasVnrArea, EnclosedPorch].
+
 
 ## performance of the model
 h2o.performance(gbm, newdata = train.hex)
@@ -212,4 +216,11 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.gbm.csv", force = T)
+h2o.exportFile(submission, path = "C:/Users/Bart Boerman/Documents/GitHub/dataCave/kaggle-housing-prices/submission.h2o.gbm.csv", force = T)
+
+
+#Warning message:
+#In doTryCatch(return(expr), name, parentenv, handler) :
+#  Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
+
+
