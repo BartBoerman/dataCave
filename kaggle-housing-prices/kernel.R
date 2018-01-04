@@ -245,7 +245,7 @@ autoMl <- h2o.automl(
   project_name = "KaggleHousingPrices"
 )
 
-## male predictions
+## make predictions
 
 finalPredictions <- h2o.predict(
   object = autoMl@leader
