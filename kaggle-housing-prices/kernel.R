@@ -1,4 +1,4 @@
-#### Reference
+#### Reference:
 ## https://github.com/h2oai/h2o-tutorials/blob/master/tutorials/gbm-randomforest/GBM_RandomForest_Example.R
 ## https://blog.h2o.ai/2016/06/h2o-gbm-tuning-tutorial-for-r/
 ## http://www.listendata.com/2016/10/r-data-table.html
