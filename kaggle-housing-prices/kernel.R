@@ -144,13 +144,13 @@ setkey(full.dt,"dataPartition")
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 
-h2o.init()
+# h2o.init() ## create a local h2o clould
 
-#### Create an H2O cloud 
-#h2o.connect(
-#  ip = "192.168.1.215",
-#  port = 54321
-#) 
+#### Create a remote H2O cloud 
+h2o.connect(
+  ip = "192.168.1.215",
+  port = 54321
+) 
 ## h2o.removeAll()        ## clean slate
 
 train.hex <- as.h2o(train.dt,"train.hex")
@@ -185,6 +185,7 @@ gbm <- h2o.gbm(
   model_id = "gbm_housing_v1",         ## name the model in H2O
   seed = 333)                          ## Set the random seed for reproducability
 
+
 ## Error after log plus scale
 #Warning message:
 #  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
@@ -195,10 +196,14 @@ gbm <- h2o.gbm(
 h2o.performance(gbm, newdata = train.hex)
 h2o.performance(gbm, newdata = validate.hex)
 
-## Show a detailed summary of the cross validation metrics
-## This gives you an idea of the variance between the folds
+## Extract specific metric
 h2o.rmsle(gbm, train = T)
 h2o.rmsle(gbm, valid = T)
+
+## Show a detailed summary of the cross validation metrics
+## This gives you an idea of the variance between the folds
+gbm@model$cross_validation_metrics_summary
+h2o.rmse(h2o.performance(gbm, xval = T))
 
 ## Variable importance
 h2o.varimp_plot(gbm)
@@ -222,5 +227,22 @@ h2o.exportFile(submission, path = "C:/Users/Bart Boerman/Documents/GitHub/dataCa
 #Warning message:
 #In doTryCatch(return(expr), name, parentenv, handler) :
 #  Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
+
+
+## automated machine learning
+
+autoMl <- h2o.automl(
+  training_frame = train.hex,        ## the H2O frame for training
+  validation_frame = validate.hex,      ## the H2O frame for validation (not required)
+  x=2:80,                        ## the predictor columns, by column index
+  y=81,                          ## the target index (what we are predicting)
+  stopping_metric = "RMSE",
+  nfolds = 3,
+  seed = 333,
+  max_runtime_secs = 600,
+  stopping_rounds = 3,
+  stopping_tolerance = 0.01,
+  project_name = "KaggleHousingPrices"
+)
 
 
