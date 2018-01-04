@@ -9,7 +9,7 @@ output:
     number_sections: true
     font-family: Open Sans, sans-serif
     font-import: https://fonts.googleapis.com/css?family=Open+Sans
-    code_folding: hide
+    code_folding: show
     highlight: tango
 editor_options: 
   chunk_output_type: console
@@ -52,11 +52,13 @@ pre { /* Code block - determines code spacing between lines */
 # Introduction
 
 ## Version
+
 **Raw inital version**.
 
 ## Goal
 
-Exploratory analyis and machine learning modal for predicting housing prices in competition ["House Prices: Advanced Regression Techniques"](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). The aim is to predict house prices based on the provided data:
+Exploratory analyis and machine learning modal for predicting 
+housing prices in competition ["House Prices: Advanced Regression Techniques"](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). The aim is to predict house prices based on the provided data:
 
 - **train.csv**,data for training our model. 
 - **test.csv**, data used to see how well our model performs on unseen data.
@@ -67,7 +69,6 @@ In addition I want to gain and share some basic knowledge of
 - machine learning with h2o
 - stacking with h2o
 
-
 ## Required libraries
 
 - **knitr**, used to create this document 
@@ -75,18 +76,206 @@ In addition I want to gain and share some basic knowledge of
 - **h2o**, machine learning algorithmes and more from h2o.ai
 - **psych**, descriptive analytics, skewness and kurtosis
 - **caret**, (near) zero variance
-
 ```{r setup, message=FALSE, warning=FALSE, paged.print=FALSE}
 require(knitr) ## a general-purpose programming engine
-knitr::opts_chunk$set(echo=TRUE, error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
 require(data.table) ## fast data wrangling
 require(h2o)        ## machine learning algorithmes
 require(psych)      ## descriptive statistics, skewness and kurtosis
 require(caret)      ## zero variance 
 ```
 
+# Get data into R
+
+```{r}
+#### Fetch data
+train.dt <- fread(input = "train.csv", 
+                  sep = ",", 
+                  nrows = -1,
+                  header = T,
+                  na.strings=c("NA","N/A","null"),
+                  stringsAsFactors = F,
+                  check.names = T,
+                  strip.white = T,
+                  blank.lines.skip = T,
+                  data.table = T
+) 
+test.dt <- fread(input = "test.csv", 
+                 sep = ",", 
+                 nrows = -1,
+                 header = T,
+                 na.strings=c("NA","N/A","null"),
+                 stringsAsFactors = F,
+                 check.names = T,
+                 strip.white = T,
+                 blank.lines.skip = T,
+                 data.table = T
+) 
+## Create one data set for feature engineering 
+train.dt[, dataPartition:="train"]
+test.dt[, SalePrice:=NA] 
+test.dt[, dataPartition:="test"]
+full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
+```
+
+# Data dictionary
+
+## Variables in raw data
+
+```{r}
+## Data types
+variableTypes.df <- cbind(as.data.frame(names(full.dt)),as.data.frame(sapply(full.dt, class)))
+names(variableTypes.df) <- c("variable","type")
+kable(variableTypes.df, , row.names = F)
+```
+
+## Definitions
+
+```{r}
+## Numeric, square footage
+variablesSquareFootage <- c(
+  "LotFrontage", 		## Linear feet of street connected to property 
+  "LotArea",    		## Lot size in square feet
+  "MasVnrArea",  		## Masonry veneer area in square feet
+  "BsmtFinSF1",		  ## Type 1 finished square feet	
+  "BsmtFinSF2",		  ## Type 2 finished square feet
+  "BsmtUnfSF",		  ## Unfinished square feet of basement area
+  "TotalBsmtSF", 		## Total square feet of basement area
+  "FirstFlrSF",		  ## First Floor square feet
+  "SecondFlrSF",	  ## Second floor square feet
+  "LowQualFinSF", 	## Low quality finished square feet (all floors)
+  "GrLivArea", 		  ## Above grade (ground) living area square feet
+  "GarageArea",     ## Size of garage in square feet
+  "WoodDeckSF",     ## Wood deck area in square feet
+  "OpenPorchSF",    ## Open porch area in square feet  
+  "EnclosedPorch",  ## Enclosed porch area in square feet 
+  "ThreeSsnPorch",  ## Three season porch area in square feet 
+  "ScreenPorch",    ## Screen porch area in square feet
+  "PoolArea" 		    ## Pool area in square feet
+)
+## Counts, a house has n of something
+variablesCounts <- c(
+  "BsmtFullBath",		## Basement full bathrooms
+  "BsmtHalfBath",		## Basement half bathrooms
+  "FullBath",			  ## Full bathrooms above grade
+  "HalfBath",			  ## Half baths above grade
+  "BedroomAbvGr",		## Bedrooms above grade (does NOT include basement bedrooms)
+  "KitchenAbvGr",		## Kitchens above grade
+  "TotRmsAbvGrd",		## Total rooms above grade (does not include bathrooms)
+  "Fireplaces",		  ## Number of fireplaces
+  "GarageCars"     	## Size of garage in car capacity
+)
+## Values
+variablesValues <- c(
+  "MiscVal",        ## $ Value of miscellaneous feature
+  "SalePrice"       ## $ Price paid
+)
+## Factors
+variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
+variablesFactor <- c(variablesFactor,  ## Add integers which are factors
+                     "MSSubClass",     ## Identifies the type of dwelling involved in the sale
+                     "OverallQual",    ## Rates the overall material and finish of the house
+                     "OverallCond"     ## Rates the overall condition of the house
+)
+```
+
+## Data conversion
+
+```{r}
+## In R first character can not be a number in variable names
+setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
+## Set columns to numeric
+changeColType <- c(variablesSquareFootage, variablesCounts, variablesValues)
+full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
+## Set columns to factor
+changeColType <- variablesFactor
+full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
+```
+
+# Descriptive statistics
+
+## statisticts
+
+```{r}
+descStats <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
+kable(descStats, digits = 2)
+```
+
+## Missing values
+
+```{r}
+countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
+countIsNA.df <- data.frame(countIsNA)
+countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
+countIsNA.df <- countIsNA.df[countIsNA >0,]
+kable(countIsNA.df)
+```
+
+## (Near) zero variance
+
+```{r}
+zeroVarianceVariables <- nearZeroVar(full.dt, names = TRUE, 
+                                     freqCut = 19, uniqueCut = 10)
+kable(zeroVarianceVariables)
+```
 
 
+## Skewness
 
+```{r}
+## skewness of numerical variables
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## from psych package
+## keep only features that exceed a threshold for skewness
+skewedVariables <- skewedVariables[skewedVariables > 0.75]
+kable(skewedVariables, digits = 2, caption = "List of skewed variables")
+```
+
+## Correlation
+
+To do.
+
+# Feature engineering
+
+## Set response variable
+
+```{r}
+response <- "SalePrice"
+```
+
+## Engineering
+
+This stuff will be done soon.
+
+## Remove zero variance variables
+
+Consider engineering to capture information from these variables. On the "to do" list it goes.
+
+```{r}
+full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
+variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
+variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
+
+```
+
+## Log transform skewed
+
+```{r}
+# Some items of .SDcols are not column names (or are NA)
+# cols <- names(skewedVariables)
+# full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
+```
+
+## Scale numerical
+
+```{r}
+varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
+full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+```
+
+## Select features
+
+```{r}
+features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
+```
 
 
