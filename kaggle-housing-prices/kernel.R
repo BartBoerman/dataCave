@@ -245,4 +245,12 @@ autoMl <- h2o.automl(
   project_name = "KaggleHousingPrices"
 )
 
+## male predictions
 
+finalPredictions <- h2o.predict(
+  object = autoMl@leader
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
