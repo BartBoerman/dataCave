@@ -11,11 +11,13 @@
 ## https://hulpbijonderzoek.nl/online-woordenboek/scheefheid/ ## skewness dutch
 ## https://alstatr.blogspot.nl/2013/06/measures-of-skewness-and-kurtosis.html ## Measures of Skewness and Kurtosis
 ## http://www.r-tutor.com/elementary-statistics/numerical-measures/skewness ## skewness
+## https://www.kaggle.com/serigne/stacked-regressions-top-4-on-leaderboard
 
 #### Dependencies
-require(data.table) # fast data wrangling
-require(h2o)        # machine learning algorithmes
-require(psych)      # descriptive statistics, skewness and kurtosis
+require(data.table) ## fast data wrangling
+require(h2o)        ## machine learning algorithmes
+require(psych)      ## descriptive statistics, skewness and kurtosis
+require(caret)      ## zero variance 
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -111,17 +113,25 @@ countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
+## (Near) zero variance
+##  Error after log plus scale
+##  Warning message:
+##  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
+##  Dropping bad and constant columns: [BsmtFinSF2, BsmtFinSF1, PoolArea, OpenPorchSF, BsmtUnfSF, ScreenPorch, TotalBsmtSF, ThreeSsnPorch, SecondFlrSF, WoodDeckSF, LowQualFinSF, MasVnrArea, EnclosedPorch].
+zeroVarianceVariables <- nearZeroVar(full.dt, names = TRUE, 
+                                     freqCut = 19, uniqueCut = 10)
+full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
+variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
+variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
 ## skewness of numerical variables
 # determine skew
 skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
 # keep only features that exceed a threshold for skewness
 skewedVariables <- skewedVariables[skewedVariables > 0.75]
-
-
-
 #### Feature engineering
 ## Response (target) variable
 response <- "SalePrice"
+
 ## transform excessively skewed features with log
 cols <- names(skewedVariables)
 full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
@@ -186,12 +196,6 @@ gbm <- h2o.gbm(
   seed = 333)                          ## Set the random seed for reproducability
 
 
-## Error after log plus scale
-#Warning message:
-#  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
-#  Dropping bad and constant columns: [BsmtFinSF2, BsmtFinSF1, PoolArea, OpenPorchSF, BsmtUnfSF, ScreenPorch, TotalBsmtSF, ThreeSsnPorch, SecondFlrSF, WoodDeckSF, LowQualFinSF, MasVnrArea, EnclosedPorch].
-
-
 ## performance of the model
 h2o.performance(gbm, newdata = train.hex)
 h2o.performance(gbm, newdata = validate.hex)
@@ -203,7 +207,7 @@ h2o.rmsle(gbm, valid = T)
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
 gbm@model$cross_validation_metrics_summary
-h2o.rmse(h2o.performance(gbm, xval = T))
+h2o.rmsle(h2o.performance(gbm, xval = T))
 
 ## Variable importance
 h2o.varimp_plot(gbm)
@@ -234,8 +238,8 @@ h2o.exportFile(submission, path = "C:/Users/Bart Boerman/Documents/GitHub/dataCa
 autoMl <- h2o.automl(
   training_frame = train.hex,        ## the H2O frame for training
   validation_frame = validate.hex,      ## the H2O frame for validation (not required)
-  x=2:80,                        ## the predictor columns, by column index
-  y=81,                          ## the target index (what we are predicting)
+  x=features,                        ## the predictor columns, by column index
+  y=response,                          ## the target index (what we are predicting)
   stopping_metric = "RMSE",
   nfolds = 3,
   seed = 333,
@@ -244,6 +248,11 @@ autoMl <- h2o.automl(
   stopping_tolerance = 0.01,
   project_name = "KaggleHousingPrices"
 )
+
+## Extract specific metric
+h2o.rmsle(autoMl@leader, train = T)
+h2o.rmsle(autoMl@leader, valid = T)
+
 
 ## make predictions
 
@@ -254,3 +263,10 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
+
+tmp <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180104_114642")
+
+
+
+
+
