@@ -1,0 +1,92 @@
+---
+title: 'Regression techniques with R data.table and h2o machine learning'
+date: '`r Sys.Date()`'
+author: "Bart Boerman"
+output:
+  html_document:
+    theme: lumen
+    toc: true
+    number_sections: true
+    font-family: Open Sans, sans-serif
+    font-import: https://fonts.googleapis.com/css?family=Open+Sans
+    code_folding: hide
+    highlight: tango
+editor_options: 
+  chunk_output_type: console
+---
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+td {  /* Table  */
+  font-size: 12px;
+}
+h1, .h1, h2, .h2, h3, .h3 {
+    margin-top: 10.5px;
+    margin-bottom: 10.5px;
+}
+h1.title {
+  font-size: 28px;
+  color: #7db956;
+}
+h1 { /* Header 1 */
+  font-size: 28px;
+  color: #3e4a52;
+}
+h2 { /* Header 2 */
+    font-size: 18px;
+  color: #3e4a52;
+}
+h3 { /* Header 3 */
+  font-size: 14px;
+  color: #3e4a52;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+# Introduction
+
+## Version
+**Raw inital version**.
+
+## Goal
+
+Exploratory analyis and machine learning modal for predicting housing prices in competition ["House Prices: Advanced Regression Techniques"](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). The aim is to predict house prices based on the provided data:
+
+- **train.csv**,data for training our model. 
+- **test.csv**, data used to see how well our model performs on unseen data.
+
+In addition I want to gain and share some basic knowledge of
+
+- data wrangling and analysis with data.table
+- machine learning with h2o
+- stacking with h2o
+
+
+## Required libraries
+
+- **knitr**, used to create this document 
+- **data.table**, fast data wrangling with R
+- **h2o**, machine learning algorithmes and more from h2o.ai
+- **psych**, descriptive analytics, skewness and kurtosis
+- **caret**, (near) zero variance
+
+```{r setup, message=FALSE, warning=FALSE, paged.print=FALSE}
+require(knitr) ## a general-purpose programming engine
+knitr::opts_chunk$set(echo=TRUE, error=FALSE, message=FALSE, warning=FALSE)
+require(data.table) ## fast data wrangling
+require(h2o)        ## machine learning algorithmes
+require(psych)      ## descriptive statistics, skewness and kurtosis
+require(caret)      ## zero variance 
+```
+
+
+
+
+
+
