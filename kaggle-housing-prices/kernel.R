@@ -40,7 +40,7 @@ test.dt <- fread(input = "test.csv",
 ) 
 ## Create one data set for feature engineering. 
 train.dt[, dataPartition:="train"]
-test.dt[, SalePrice:=NA] 
+test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 #### Data dictionary
@@ -112,9 +112,8 @@ countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
 ## skewness of numerical variables
-# determine skew
-skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
-# keep only features that exceed a threshold for skewness
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## from psych package
+## keep only features that exceed a threshold for skewness
 skewedVariables <- skewedVariables[skewedVariables > 0.75]
 
 
@@ -122,6 +121,13 @@ skewedVariables <- skewedVariables[skewedVariables > 0.75]
 #### Feature engineering
 ## Response (target) variable
 response <- "SalePrice"
+## remove (near) zero variance
+zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
+                                     freqCut = 19, uniqueCut = 10,
+                                     foreach = T, allowParallel = T) ##
+full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
+variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
+variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
 ## transform excessively skewed features with log
 cols <- names(skewedVariables)
 full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
@@ -130,6 +136,8 @@ full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
 
 full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+
+
 
 #### Select features
 ## All features
@@ -144,13 +152,13 @@ setkey(full.dt,"dataPartition")
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 
-# h2o.init() ## create a local h2o clould
+h2o.init() ## create a local h2o clould
 
 #### Create a remote H2O cloud 
-h2o.connect(
-  ip = "192.168.1.215",
-  port = 54321
-) 
+#h2o.connect(
+#  ip = "192.168.1.215",
+#  port = 54321
+#) 
 ## h2o.removeAll()        ## clean slate
 
 train.hex <- as.h2o(train.dt,"train.hex")
@@ -184,6 +192,22 @@ gbm <- h2o.gbm(
   score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
   model_id = "gbm_housing_v1",         ## name the model in H2O
   seed = 333)                          ## Set the random seed for reproducability
+
+
+## Random Forest
+rf <- h2o.randomForest(
+  training_frame = train.hex,          ## the H2O frame for training
+  validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+  x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+  y=response,                          ## what we are predicting,alternativaly, e.g. 81
+  nfolds = 3,
+  mtries = -1,                          ## Defaults to -1   
+  ntrees = 50,
+  stopping_rounds = 5, stopping_tolerance = 0.01, 
+  stopping_metric = "RMSLE", 
+  score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
+  model_id = "rf_housing_v1",          ## name the model in H2O
+  seed = 333)     
 
 
 ## Error after log plus scale
