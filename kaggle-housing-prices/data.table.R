@@ -1,9 +1,8 @@
-#http://www.listendata.com/2016/10/r-data-table.html
-# http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
-require(data.table)
-require(ggplot2)
-setwd("~/GitHub/dataCave/kaggle-housing-prices")
-
+#### Dependencies
+require(data.table) # fast data wrangling
+require(h2o)        # machine learning algorithmes
+require(psych)      # descriptive statistics, skewness and kurtosis
+require(caret)      # (near) zero variance
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -28,7 +27,7 @@ test.dt <- fread(input = "test.csv",
 ) 
 ## Create one data set for feature engineering. 
 train.dt[, dataPartition:="train"]
-test.dt[, SalePrice:=NA] 
+test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 #### Data dictionary
@@ -76,17 +75,12 @@ variablesValues <- c(
 ## Factors
 variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
 variablesFactor <- c(variablesFactor,
-  "MSSubClass",     ## Identifies the type of dwelling involved in the sale
-  "OverallQual",    ## Rates the overall material and finish of the house
-  "OverallCond"     ## Rates the overall condition of the house
+                     "MSSubClass",     ## Identifies the type of dwelling involved in the sale
+                     "OverallQual",    ## Rates the overall material and finish of the house
+                     "OverallCond"     ## Rates the overall condition of the house
 )
-## Response (target) variable
-response <- "SalePriceLog"
-## All features
-features <- setdiff(names(full.hex), c(response, "Id","SalePrice","dataPartition")) 
-## Below grade?
-## Below grade in real estate is a term that describes a space that is below ground level – usually referred to as a basement.
-## You could have a basement floor that is only one foot under the ground and it would still be a below grade floor.
+# <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
+# <-names(feature_classes[feature_classes != "character"])
 #### Data engineering
 ## In R first character can not be a number in variable names
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
