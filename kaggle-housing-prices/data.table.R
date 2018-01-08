@@ -1,6 +1,15 @@
+###################################################################
+#### References                                                ####
+###################################################################
 #http://www.listendata.com/2016/10/r-data-table.html
 # http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
+###################################################################
+#### Dependencies                                              ####
+###################################################################
 require(data.table)
+###################################################################
+#### Get data                                                  ####
+###################################################################
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -28,7 +37,9 @@ train.dt[, dataPartition:="train"]
 test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
-#### Data dictionary
+###################################################################
+#### Data dictionary                                           ####
+###################################################################
 ## Data types
 variableTypes.df <- cbind(as.data.frame(names(full.dt)),as.data.frame(sapply(full.dt, class)))
 names(variableTypes.df) <- c("variable","type")
@@ -79,3 +90,14 @@ variablesFactor <- c(variablesFactor,
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
+###################################################################
+#### Dara engineering                                          ####
+###################################################################
+## In R first character can not be a number in variable names
+setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
+## Set columns to numeric
+changeColType <- c(variablesSquareFootage, variablesCounts, variablesValues)
+full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
+## Set columns to factor
+changeColType <- variablesFactor
+full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
