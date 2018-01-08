@@ -108,7 +108,7 @@ variablesFactor <- c(variablesFactor,
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
 ###################################################################
-#### Dara engineering                                          ####
+#### Data engineering                                          ####
 ###################################################################
 ## In R first character can not be a number in variable names
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
