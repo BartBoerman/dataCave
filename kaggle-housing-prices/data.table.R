@@ -101,9 +101,9 @@ variablesFactor <- c(variablesFactor,
                      "OverallCond",    ## Rates the overall condition of the house
                      #"MoSold",         ## For now a factor   
                      "YrSold",         ## For now a factor
-                     "YearRemodAdd",   ## For now a factor
-                     "YearBuilt",      ## For now a factor
-                     "GarageYrBlt"     ## For now a factor
+                     "YearRemodAdd"   ## For now a factor
+                     #"YearBuilt",      ## For now a factor
+                     #"GarageYrBlt"     ## For now a factor
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
