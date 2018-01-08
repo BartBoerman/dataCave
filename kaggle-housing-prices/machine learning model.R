@@ -12,15 +12,34 @@ h2o.connect(
   port = 54321
 ) 
 ###################################################################
-#### Select features                                           ####
+#### Set response (target)                                     ####
 ###################################################################
-features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
+response <- "SalePrice"
 ###################################################################
 #### Pre-processing                                            ####
 ###################################################################
-## log transform (including response variable)
-## scale
 ## remove variables with zero variance
+zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
+                                     freqCut = 10, uniqueCut = 2,
+                                     foreach = T, allowParallel = T) ## Select variables with (near) zero veriance
+full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
+variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
+variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
+## log transform skewed variables (including response variable)
+# determine skew
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
+# keep only features that exceed a threshold for skewness
+skewedVariables <- skewedVariables[skewedVariables > 0.75]
+## transform excessively skewed features with log
+skewedVariables <- names(skewedVariables)
+full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewedVariables]
+## scale (excluding response)
+varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
+full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+###################################################################
+#### Select features                                           ####
+###################################################################
+features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
 ###################################################################
 #### Split data                                                ####
 ###################################################################
