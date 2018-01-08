@@ -7,6 +7,7 @@
 ## https://www.kaggle.com/nick898/descriptive-statistics-for-housing-prices ## statistics
 ## https://www.kaggle.com/sidraina89/regularized-regression-housing-pricing
 ## https://www.kaggle.com/michaldatberg/dataexploration-and-modeling-with-h2o
+## https://www.kaggle.com/serigne/stacked-regressions-top-4-on-leaderboard
 ## http://www.itl.nist.gov/div898/handbook/eda/section3/eda35b.htm
 ## https://hulpbijonderzoek.nl/online-woordenboek/scheefheid/ ## skewness dutch
 ## https://alstatr.blogspot.nl/2013/06/measures-of-skewness-and-kurtosis.html ## Measures of Skewness and Kurtosis
@@ -16,6 +17,7 @@
 require(data.table) # fast data wrangling
 require(h2o)        # machine learning algorithmes
 require(psych)      # descriptive statistics, skewness and kurtosis
+require(caret)      # (near) zero variance
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -111,23 +113,22 @@ countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
-## skewness of numerical variables
-skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## from psych package
-## keep only features that exceed a threshold for skewness
-skewedVariables <- skewedVariables[skewedVariables > 0.75]
-
 
 
 #### Feature engineering
 ## Response (target) variable
 response <- "SalePrice"
-## remove (near) zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
-                                     freqCut = 19, uniqueCut = 10,
-                                     foreach = T, allowParallel = T) ##
+                                     freqCut = 10, uniqueCut = 2,
+                                     foreach = T, allowParallel = T) ## Select variables with (near) zero veriance
 full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
 variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
 variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
+## skewness of numerical variables
+# determine skew
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
+# keep only features that exceed a threshold for skewness
+skewedVariables <- skewedVariables[skewedVariables > 0.75]
 ## transform excessively skewed features with log
 cols <- names(skewedVariables)
 full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
@@ -136,8 +137,6 @@ full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
 
 full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
-
-
 
 #### Select features
 ## All features
@@ -152,17 +151,19 @@ setkey(full.dt,"dataPartition")
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 
-h2o.init() ## create a local h2o clould
+#h2o.init() ## create a local h2o clould
 
 #### Create a remote H2O cloud 
-#h2o.connect(
-#  ip = "192.168.1.215",
-#  port = 54321
-#) 
+h2o.connect(
+  ip = "192.168.1.215",
+  port = 54321
+) 
 ## h2o.removeAll()        ## clean slate
 
 train.hex <- as.h2o(train.dt,"train.hex")
 test.hex <- as.h2o(test.dt,"test.hex")
+
+
 
 h2o.describe(train.hex)[,1:4]
 
@@ -188,27 +189,25 @@ gbm <- h2o.gbm(
   #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
   sample_rate = 0.8,                   ## sample 80% of rows per tree
   col_sample_rate = 0.8,               ## sample 80% of columns per split
+  ignore_const_cols = TRUE,
   stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
   score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
   model_id = "gbm_housing_v1",         ## name the model in H2O
   seed = 333)                          ## Set the random seed for reproducability
 
 
-## Random Forest
-rf <- h2o.randomForest(
-  training_frame = train.hex,          ## the H2O frame for training
-  validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-  x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-  y=response,                          ## what we are predicting,alternativaly, e.g. 81
-  nfolds = 3,
-  mtries = -1,                          ## Defaults to -1   
-  ntrees = 50,
-  stopping_rounds = 5, stopping_tolerance = 0.01, 
-  stopping_metric = "RMSLE", 
-  score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
-  model_id = "rf_housing_v1",          ## name the model in H2O
-  seed = 333)     
-
+glm <- h2o.glm(
+    training_frame = train.hex,          ## the H2O frame for training
+    validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+    x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+    y=response,                          ## what we are predicting,alternativaly, e.g. 81
+    nfolds = 3,
+    fold_assignment = "Modulo", 
+    ignore_const_cols = TRUE,
+    solver = "L_BFGS",
+    early_stopping = TRUE,
+    model_id = "gbm_housing_v1",
+    seed = 333)  
 
 ## Error after log plus scale
 #Warning message:
@@ -269,7 +268,7 @@ autoMl <- h2o.automl(
   project_name = "KaggleHousingPrices"
 )
 
-## male predictions
+## make predictions
 
 finalPredictions <- h2o.predict(
   object = autoMl@leader
@@ -278,3 +277,97 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
+
+# Train & Cross-validate a GBM
+nFolds <- 3
+gbm <- h2o.gbm(x = features,
+                  y = response,
+                  training_frame = train.hex,
+                  #validation_frame = validate.hex,    
+                  distribution = "AUTO",
+                  ntrees = 100,
+                  max_depth = 5,
+                  min_rows = 8, ## Specify the minimum number of observations for a leaf (nodesize in R).
+                  learn_rate = 0.1,
+                  min_split_improvement = 0.001, ## overfitting at an high split improvement, e.g.0.8
+                  sample_rate = 0.8,                   ## sample 80% of rows per tree
+                  #col_sample_rate = 0.8,               ## sample 80% of columns per split
+                  nfolds = nFolds,
+                  fold_assignment = "Modulo",
+                  keep_cross_validation_predictions = TRUE,
+                  ignore_const_cols = TRUE,
+                  stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+                  seed = 333)
+
+gbm@model$model_summary
+
+h2o.rmsle(gbm, train = T)
+h2o.rmsle(gbm, xval = T)
+h2o.rmsle(gbm, valid = T)
+
+# Train & Cross-validate a RF
+rf <- h2o.randomForest(x = features,
+                          y = response,
+                          training_frame = train.hex,
+                          #validation_frame = validate.hex, 
+                          nfolds = nFolds,
+                          ntrees = 100,
+                          #sample_rate = 0.7,
+                          min_rows = 8, ## Specify the minimum number of observations for a leaf (nodesize in R).
+                          max_depth = 20,
+                          fold_assignment = "Modulo",
+                          keep_cross_validation_predictions = TRUE,
+                          ignore_const_cols = TRUE,
+                          stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+                          seed = 333)
+rf@model$model_summary
+
+h2o.rmsle(rf, train = T)
+h2o.rmsle(rf, xval = T)
+h2o.rmsle(rf, valid = T)
+
+glm <- h2o.glm(
+  training_frame = train.hex,          ## the H2O frame for training
+#  validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+  x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+  y=response,                          ## what we are predicting,alternativaly, e.g. 81
+  nfolds = 3,
+  fold_assignment = "Modulo", 
+  keep_cross_validation_predictions = TRUE,
+  ignore_const_cols = TRUE,
+  solver = "L_BFGS",
+  early_stopping = TRUE,
+  model_id = "gbm_housing_v1",
+  seed = 333)  
+
+h2o.rmsle(glm, train = T)
+h2o.rmsle(glm, xval = T)
+h2o.rmsle(glm, valid = T)
+
+
+# Train a stacked ensemble 
+ensemble <- h2o.stackedEnsemble(x = features,
+                                y = response,
+                                training_frame = train.hex,
+                                #validation_frame = validate.hex,
+                                metalearner_nfolds = nFolds,
+                                metalearner_algorithm = "deeplearning",
+                                model_id = "ensemble4",
+                                base_models = list(gbm, rf,glm))
+
+h2o.rmsle(ensemble, train = T)
+h2o.rmsle(ensemble, xval = T)
+h2o.rmsle(ensemble, valid = T)
+
+
+## make predictions
+
+finalPredictions <- h2o.predict(
+  object = gbm
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.gbm.csv", force = T)
+
+

@@ -1,6 +1,6 @@
 ---
 title: 'Regression techniques with R data.table and h2o machine learning'
-date: '`r Sys.Date()`'
+date: "`r format(Sys.Date())`"
 author: "Bart Boerman"
 output:
   html_document:
@@ -60,8 +60,8 @@ pre { /* Code block - determines code spacing between lines */
 Exploratory analyis and machine learning modal for predicting 
 housing prices in competition ["House Prices: Advanced Regression Techniques"](https://www.kaggle.com/c/house-prices-advanced-regression-techniques). The aim is to predict house prices based on the provided data:
 
-- **train.csv**,data for training our model. 
-- **test.csv**, data used to see how well our model performs on unseen data.
+- **train.csv**,data for training our model 
+- **test.csv**, data used to see how well our model performs on unseen data
 
 In addition I want to gain and share some basic knowledge of
 
@@ -83,6 +83,7 @@ require(data.table) ## fast data wrangling
 require(h2o)        ## machine learning algorithmes
 require(psych)      ## descriptive statistics, skewness and kurtosis
 require(caret)      ## zero variance 
+require(DT)         ## Display interactive tables in html
 ```
 
 # Get data into R
@@ -113,7 +114,7 @@ test.dt <- fread(input = "test.csv",
 ) 
 ## Create one data set for feature engineering 
 train.dt[, dataPartition:="train"]
-test.dt[, SalePrice:=NA] 
+test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 ```
@@ -126,7 +127,7 @@ full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 ## Data types
 variableTypes.df <- cbind(as.data.frame(names(full.dt)),as.data.frame(sapply(full.dt, class)))
 names(variableTypes.df) <- c("variable","type")
-kable(variableTypes.df, , row.names = F)
+datatable(variableTypes.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
 ## Definitions
@@ -198,7 +199,7 @@ full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 
 ```{r}
 descStats <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
-kable(descStats, digits = 2)
+datatable(round(descStats,2), rownames = T, options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
 ## Missing values
@@ -208,17 +209,24 @@ countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
-kable(countIsNA.df)
+datatable(countIsNA.df, options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
 ## (Near) zero variance
 
 ```{r}
-zeroVarianceVariables <- nearZeroVar(full.dt, names = TRUE, 
-                                     freqCut = 19, uniqueCut = 10)
-kable(zeroVarianceVariables)
+zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
+                                     freqCut = 19, uniqueCut = 10,
+                                     foreach = T, allowParallel = T) ## Select variables with (near) zero veriance
+## for presentation purposes:
+zeroVarianceVariables.df <- nearZeroVar(full.dt,names = T, saveMetrics = T, 
+                                        foreach = T, 
+                                        allowParallel = T)
+zeroVarianceVariables.df$variable <- row.names(zeroVarianceVariables.df)
+zeroVarianceVariables.df <- zeroVarianceVariables.df[zeroVarianceVariables.df$nzv == "TRUE", c("variable","freqRatio","percentUnique")]
+zeroVarianceVariables.df[,-1] <-round(zeroVarianceVariables.df[,-1],2)
+datatable(zeroVarianceVariables.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
 ```
-
 
 ## Skewness
 
@@ -227,7 +235,13 @@ kable(zeroVarianceVariables)
 skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## from psych package
 ## keep only features that exceed a threshold for skewness
 skewedVariables <- skewedVariables[skewedVariables > 0.75]
-kable(skewedVariables, digits = 2, caption = "List of skewed variables")
+## for presentation purposes:
+skewedVariables.df <- as.data.frame(skewedVariables)
+names(skewedVariables.df) <- c("skew")
+skewedVariables.df$variable <- row.names(skewedVariables.df)
+skewedVariables.df <- skewedVariables.df[,c("variable","skew")]
+skewedVariables.df[,-1] <-round(skewedVariables.df[,-1],2)
+datatable(skewedVariables.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
 ## Correlation
@@ -236,15 +250,18 @@ To do.
 
 # Feature engineering
 
+
+## Engineering
+
+This stuff will be done soon.
+
+# Pre-processing and feature selection
+
 ## Set response variable
 
 ```{r}
 response <- "SalePrice"
 ```
-
-## Engineering
-
-This stuff will be done soon.
 
 ## Remove zero variance variables
 
@@ -272,10 +289,9 @@ varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## 
 full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
 ```
 
-## Select features
+# Feature selection
+
 
 ```{r}
 features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
 ```
-
-
