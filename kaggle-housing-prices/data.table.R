@@ -135,8 +135,6 @@ full.dt[,ExterQual:=ordered(ExterQual, levels = c("Po","Fa","TA","Gd","Ex"))]
 full.dt[,ExterCond:=ordered(ExterCond, levels = c("Po","Fa","TA","Gd","Ex"))]
 ## BsmtQual (contains NA's), evaluates the height of the basement
 full.dt[,BsmtQual:=ordered(BsmtQual, levels = c("None","Po","Fa","TA","Gd","Ex"))]
-## BsmtCond (contains NA's), evaluates the general condition of the basement
-full.dt[,BsmtCond:=ordered(BsmtCond, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## BsmtExposure (contains NA's), refers to walkout or garden level walls
 full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","Gd"))]
 ## Did not (yet) convert all possible factors to hierarchical.
