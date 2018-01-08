@@ -40,8 +40,6 @@ full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewed
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
 full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
 ## convert hierarchical factors to integers
-c("OverallQual","OverallCond","KitchenQual","GarageFinish",
-  "ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure")
 changeColType <- c("OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure")
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ###################################################################
