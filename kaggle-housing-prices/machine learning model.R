@@ -137,12 +137,25 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 600,
+  max_runtime_secs = 300,
   stopping_rounds = 3,
   stopping_tolerance = 0.01,
   project_name = "KaggleHousingPrices"
 )
-
+autoMl@leaderboard ## Models evaluated bu h2o
+## Extract specific metric
+h2o.rmsle(autoMl@leader, train = T)
+h2o.rmsle(autoMl@leader, valid = T)
+###################################################################
+#### Predict and submit                                        ####
+###################################################################
+finalPredictions <- h2o.predict(
+  object = autoMl@leader
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
 
 
 
