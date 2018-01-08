@@ -228,3 +228,16 @@ autoMl@leaderboard ## Models evaluated bu h2o
 h2o.rmsle(autoMl@leader, train = T)
 h2o.rmsle(autoMl@leader, valid = T)
 
+###################################################################
+finalPredictions <- h2o.predict(
+  object = autoMl@leader
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
+
+# Test/Validation dataset column 'YearBuilt' has levels not trained on: [1879, 1895, 1896, 1901, 1902, 1907]
+# Test/Validation dataset column 'GarageYrBlt' has levels not trained on: [1895, 1896, 1917, 1919, 1943, 2207]
+# Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
+
