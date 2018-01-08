@@ -7,6 +7,7 @@
 #### Dependencies                                              ####
 ###################################################################
 require(h2o)        # machine learning algorithmes
+require(caret)      # (near) zero variance
 h2o.connect(
   ip = "192.168.1.215",
   port = 54321
@@ -60,5 +61,30 @@ splits <- h2o.splitFrame(
 
 train.hex <- h2o.assign(splits[[1]], "train.hex")   
 validate.hex <- h2o.assign(splits[[2]], "valid.hex")  
+###################################################################
+#### Gradient Boosting Machine (GBM)                           ####
+###################################################################
+gbm <- h2o.gbm(
+      training_frame = train.hex,          ## the H2O frame for training
+      validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+      x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+      y=response,                          ## what we are predicting,alternativaly, e.g. 81
+      nfolds = 3,
+      ntrees = 40, # first do 1000, then plot, then adjust to 40
+      learn_rate=0.1,
+      #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
+      sample_rate = 0.8,                   ## sample 80% of rows per tree
+      col_sample_rate = 0.8,               ## sample 80% of columns per split
+      ignore_const_cols = TRUE,
+      stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+      score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
+      model_id = "gbm_housing_v1",         ## name the model in H2O
+      seed = 333)                          ## Set the random seed for reproducability
+
+
+
+
+
+
 
 

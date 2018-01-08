@@ -8,6 +8,7 @@
 ###################################################################
 require(data.table) # fast data wrangling and analysis
 require(psych)      # descriptive statistics, skewness and kurtosis
+require(caret)      # (near) zero variance
 ###################################################################
 #### Syntax description                                        ####
 ###################################################################
