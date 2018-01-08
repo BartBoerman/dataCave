@@ -99,11 +99,11 @@ variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
                      "OverallCond",    ## Rates the overall condition of the house
-                     "MoSold",         ## For now a factor   
+                     #"MoSold",         ## For now a factor   
                      "YrSold",         ## For now a factor
                      "YearRemodAdd",   ## For now a factor
                      "YearBuilt",      ## For now a factor
-                     "GarageYrBlt"
+                     "GarageYrBlt"     ## For now a factor
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
@@ -121,16 +121,26 @@ full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 ###################################################################
 #### Ordered factors                                           ####
 ###################################################################
-## Not supported in h2o, convert them to integers?
-## OverallQual
-#ordered(sizes, levels = c("small", "medium", "large"))
-#full.dt[,OverallQual:=ordered(OverallQual, levels = c(1:10))]
-## OverallCond
-#full.dt[,OverallCond:=ordered(OverallCond, levels = c(1:10))]
-## KitchenQual
-#full.dt[,KitchenQual:=ordered(KitchenQual, levels = c("Ex","Gd","TA","Fa","Po"))]
-## GarageFinish
-#full.dt[,GarageFinish:=ordered(GarageFinish, levels = c("Fin","RFn","Unf","None"))]
+## OverallQual, rates the overall material and finish of the house
+full.dt[,OverallQual:=ordered(OverallQual, levels = c(1:10))]
+## OverallCond, rates the overall condition of the house
+full.dt[,OverallCond:=ordered(OverallCond, levels = c(1:10))]
+## KitchenQual, kitchen quality
+full.dt[,KitchenQual:=ordered(KitchenQual, levels = c("Po","Fa","TA","Gd","Ex"))]
+## GarageFinish (contains NA's)
+full.dt[,GarageFinish:=ordered(GarageFinish, levels = c("None","Unf","RFn","Fin"))]
+## ExterQual, evaluates the quality of the material on the exterior  
+full.dt[,ExterQual:=ordered(ExterQual, levels = c("Po","Fa","TA","Gd","Ex"))]
+## ExterCond, evaluates the present condition of the material on the exterior
+full.dt[,ExterCond:=ordered(ExterCond, levels = c("Po","Fa","TA","Gd","Ex"))]
+## BsmtQual (contains NA's), evaluates the height of the basement
+full.dt[,BsmtQual:=ordered(BsmtQual, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## BsmtCond (contains NA's), evaluates the general condition of the basement
+full.dt[,BsmtCond:=ordered(BsmtCond, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## BsmtExposure (contains NA's), refers to walkout or garden level walls
+full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","Gd"))]
+## Did not (yet) convert all possible factors to hierarchical.
+## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
 #### Descriptive statistics                                    ####
 ###################################################################
@@ -146,5 +156,3 @@ print(countIsNA.df)
 ## zero variance
 zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
                                         foreach = T, allowParallel = T)
-
-
