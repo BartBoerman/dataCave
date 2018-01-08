@@ -39,6 +39,11 @@ full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewed
 ## scale (excluding response)
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
 full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+## convert hierarchical factors to integers
+c("OverallQual","OverallCond","KitchenQual","GarageFinish",
+  "ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure")
+changeColType <- c("OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure")
+full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ###################################################################
 #### Select features                                           ####
 ###################################################################
@@ -69,8 +74,8 @@ gbm <- h2o.gbm(
       validation_frame = validate.hex,     ## the H2O frame for validation (not required)
       x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
       y=response,                          ## what we are predicting,alternativaly, e.g. 81
-      nfolds = 7,
-      ntrees = 40, # first do 1000, then plot, then adjust to 40
+      nfolds = 5,
+      ntrees = 1000, # first do 1000, then plot, then adjust to 40
       learn_rate=0.1,
       #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
       sample_rate = 0.8,                   ## sample 80% of rows per tree
@@ -110,12 +115,12 @@ glm <- h2o.glm(
           validation_frame = validate.hex,     ## the H2O frame for validation (not required)
           x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
           y=response,                          ## what we are predicting,alternativaly, e.g. 81
-          nfolds = 7,
+          nfolds = 5,
           fold_assignment = "Modulo", 
           ignore_const_cols = TRUE,
           solver = "L_BFGS",
           early_stopping = TRUE,
-          max_iterations = 50,
+          max_iterations = 100,
           model_id = "glm_housing_v1",
           seed = 333)
 ## performance of the model
