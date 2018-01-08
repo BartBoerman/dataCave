@@ -80,6 +80,68 @@ gbm <- h2o.gbm(
       score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
       model_id = "gbm_housing_v1",         ## name the model in H2O
       seed = 333)                          ## Set the random seed for reproducability
+## performance of the model
+h2o.performance(gbm, newdata = train.hex)
+h2o.performance(gbm, newdata = validate.hex)
+## Extract specific metric
+h2o.rmsle(gbm, train = T)
+h2o.rmsle(gbm, valid = T)
+h2o.rmse(h2o.performance(gbm, xval = T))
+## Show a detailed summary of the cross validation metrics
+## This gives you an idea of the variance between the folds
+gbm@model$cross_validation_metrics_summary
+###################################################################
+#### Variable importance                                       ####
+###################################################################
+## plot
+h2o.varimp_plot(gbm)
+## create overview for future reference
+varImportance <- h2o.varimp(gbm)
+varImportance.df <- as.data.frame(cbind(varImportance$variable, varImportance$percentage))
+names(varImportance.df) <- c("variable","importance")
+varImportance.df$importance <- round(as.numeric(as.character(varImportance.df$importance)),3)
+write.csv(varImportance.df, file = "varImp.csv")
+###################################################################
+#### Generalized Linear Model (GLM)                            ####
+###################################################################
+glm <- h2o.glm(
+          training_frame = train.hex,          ## the H2O frame for training
+          validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+          x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+          y=response,                          ## what we are predicting,alternativaly, e.g. 81
+          nfolds = 3,
+          fold_assignment = "Modulo", 
+          ignore_const_cols = TRUE,
+          solver = "L_BFGS",
+          early_stopping = TRUE,
+          model_id = "glm_housing_v1",
+          seed = 333)
+## performance of the model
+h2o.performance(glm, newdata = train.hex)
+h2o.performance(glm, newdata = validate.hex)
+## Extract specific metric
+h2o.rmsle(glm, train = T)
+h2o.rmsle(glm, valid = T)
+h2o.rmse(h2o.performance(glm, xval = T))
+## Show a detailed summary of the cross validation metrics
+## This gives you an idea of the variance between the folds
+gbm@model$cross_validation_metrics_summary
+###################################################################
+#### Automated machine learning                                ####
+###################################################################
+autoMl <- h2o.automl(
+  training_frame = train.hex,        ## the H2O frame for training
+  validation_frame = validate.hex,      ## the H2O frame for validation (not required)
+  x=features,                        ## the predictor columns, by column index
+  y=response,                          ## the target index (what we are predicting)
+  stopping_metric = "RMSLE",
+  nfolds = 3,
+  seed = 333,
+  max_runtime_secs = 600,
+  stopping_rounds = 3,
+  stopping_tolerance = 0.01,
+  project_name = "KaggleHousingPrices"
+)
 
 
 
