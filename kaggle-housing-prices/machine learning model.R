@@ -18,6 +18,8 @@ response <- "SalePrice"
 ###################################################################
 #### Pre-processing                                            ####
 ###################################################################
+## remove outliers
+full.dt <- full.dt[!(Id %in% outliers.Id),]
 ## remove variables with zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
                                      freqCut = 10, uniqueCut = 2,

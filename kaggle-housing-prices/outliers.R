@@ -19,9 +19,7 @@ train.dt[,.(count=.N), by=Neighborhood][order(Neighborhood)]
 #### Alternatives (to do)
 ## Set value to 0.95 quantile
 ## Analyse outliers per neighborhood
-###################################################################
-#### Delete outliers                                           ####
-###################################################################
-full.dt <- full.dt[!(Id %in% outliers.Id),]
+
+
 
 
