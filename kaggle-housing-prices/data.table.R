@@ -9,6 +9,15 @@
 require(data.table) # fast data wrangling and analysis
 require(psych)      # descriptive statistics, skewness and kurtosis
 ###################################################################
+#### Syntax description                                        ####
+###################################################################
+## The general form of data.table syntax is:
+##  DT[ i,  j,  by ] # + extra arguments
+##      |   |   |
+##      |   |    -------> grouped by what?
+##      |    -------> what to do?
+##       ---> on which rows?
+###################################################################
 #### Get data                                                  ####
 ###################################################################
 train.dt <- fread(input = "train.csv", 
