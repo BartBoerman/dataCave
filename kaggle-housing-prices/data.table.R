@@ -1,8 +1,9 @@
 ###################################################################
 #### References                                                ####
 ###################################################################
-#http://www.listendata.com/2016/10/r-data-table.html
-# http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
+##http://www.listendata.com/2016/10/r-data-table.html
+##http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
+##http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
 ###################################################################
 #### Dependencies                                              ####
 ###################################################################
@@ -97,7 +98,12 @@ variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, cl
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
-                     "OverallCond"     ## Rates the overall condition of the house
+                     "OverallCond",    ## Rates the overall condition of the house
+                     "MoSold",         ## For now a factor   
+                     "YrSold",         ## For now a factor
+                     "YearRemodAdd",   ## For now a factor
+                     "YearBuilt",      ## For now a factor
+                     "GarageYrBlt"
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
@@ -112,6 +118,19 @@ full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
 changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
+###################################################################
+#### Ordered factors                                           ####
+###################################################################
+## Not supported in h2o, convert them to integers?
+## OverallQual
+#ordered(sizes, levels = c("small", "medium", "large"))
+#full.dt[,OverallQual:=ordered(OverallQual, levels = c(1:10))]
+## OverallCond
+#full.dt[,OverallCond:=ordered(OverallCond, levels = c(1:10))]
+## KitchenQual
+#full.dt[,KitchenQual:=ordered(KitchenQual, levels = c("Ex","Gd","TA","Fa","Po"))]
+## GarageFinish
+#full.dt[,GarageFinish:=ordered(GarageFinish, levels = c("Fin","RFn","Unf","None"))]
 ###################################################################
 #### Descriptive statistics                                    ####
 ###################################################################
