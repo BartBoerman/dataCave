@@ -123,3 +123,8 @@ countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
 print(countIsNA.df)
+## zero variance
+zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
+                                        foreach = T, allowParallel = T)
+
+
