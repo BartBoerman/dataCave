@@ -6,7 +6,8 @@
 ###################################################################
 #### Dependencies                                              ####
 ###################################################################
-require(data.table)
+require(data.table) # fast data wrangling and analysis
+require(psych)      # descriptive statistics, skewness and kurtosis
 ###################################################################
 #### Get data                                                  ####
 ###################################################################
@@ -101,3 +102,15 @@ full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
 changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
+###################################################################
+#### Descriptive statistics                                    ####
+###################################################################
+## statisticts
+descStats.df <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
+print(descStats.df)
+## na values
+countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
+countIsNA.df <- data.frame(countIsNA)
+countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
+countIsNA.df <- countIsNA.df[countIsNA >0,]
+print(countIsNA.df)
