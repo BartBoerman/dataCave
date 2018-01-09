@@ -98,12 +98,13 @@ variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, cl
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
-                     "OverallCond",    ## Rates the overall condition of the house
-                     #"MoSold",         ## For now a factor   
-                     "YrSold",         ## For now a factor
-                     "YearRemodAdd"   ## For now a factor
-                     #"YearBuilt",      ## For now a factor
-                     #"GarageYrBlt"     ## For now a factor
+                     "OverallCond"     ## Rates the overall condition of the house
+                     ## Import year and months as integers.
+                     #"MoSold",           
+                     #"YrSold",        
+                     #"YearRemodAdd"   
+                     #"YearBuilt",     
+                     #"GarageYrBlt"    
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
