@@ -142,6 +142,8 @@ full.dt[,BsmtCond:=ordered(BsmtCond, levels = c("None","Po","Fa","TA","Gd","Ex")
 full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","Gd"))]
 ## BsmtFinType1 (contains NA's), rating of basement finished area
 full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec","BLQ","ALQ","GLQ"))]
+## FireplaceQu (contains NA's), fireplace quality
+full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## Did not (yet) convert all possible factors to hierarchical.
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
@@ -174,6 +176,8 @@ full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin"
 full.dt[is.na(GarageFinish), GarageFinish := "None"]
 full.dt[is.na(GarageQual), GarageQual := "None"]
 full.dt[is.na(GarageCond), GarageCond := "None"]
+full.dt[is.na(GarageType), GarageType := "None"]
+full.dt[is.na(GarageYrBlt), GarageYrBlt := 0]
 ## Basement
 full.dt[is.na(BsmtExposure) & BsmtFinType1 == "Unf" , BsmtExposure := "No"]
 full.dt[is.na(BsmtExposure), BsmtExposure := "None"]
@@ -185,7 +189,8 @@ full.dt[is.na(BsmtFinType2) & BsmtFinSF2 > 0, BsmtFinType2 := "Unf"]
 full.dt[is.na(BsmtFinType2), BsmtFinType2 := "None"]
 full.dt[is.na(BsmtFinSF1),':=' (BsmtFinSF1 = 0, BsmtFinSF2 = 0, BsmtUnfSF = 0, TotalBsmtSF = 0)] 
 full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)] 
-##  
+## FireplaceQu  
+full.dt[is.na(FireplaceQu), FireplaceQu := "None"]
 
 ## Did not (yet) impute all missing values
 ###################################################################

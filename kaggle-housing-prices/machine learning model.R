@@ -22,7 +22,7 @@ response <- "SalePrice"
 ## remove outliers
 full.dt <- full.dt[!(Id %in% outliers.Id),]
 ## convert hierarchical factors to integers
-changeColType <- c("OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1")
+changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1")
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ## remove variables with zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
