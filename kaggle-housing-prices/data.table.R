@@ -136,8 +136,12 @@ full.dt[,ExterQual:=ordered(ExterQual, levels = c("Po","Fa","TA","Gd","Ex"))]
 full.dt[,ExterCond:=ordered(ExterCond, levels = c("Po","Fa","TA","Gd","Ex"))]
 ## BsmtQual (contains NA's), evaluates the height of the basement
 full.dt[,BsmtQual:=ordered(BsmtQual, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## BsmtCond (contains NA's), evaluates the general condition of the basement
+full.dt[,BsmtCond:=ordered(BsmtCond, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## BsmtExposure (contains NA's), refers to walkout or garden level walls
 full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","Gd"))]
+## BsmtFinType1 (contains NA's), rating of basement finished area
+full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec","BLQ","ALQ","GLQ"))]
 ## Did not (yet) convert all possible factors to hierarchical.
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
@@ -162,8 +166,8 @@ zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
 full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
 ## Garage
 full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
-                                                        GarageCars =1,
-                                                        GarageArea= 360,
+                                                        GarageCars = 1,
+                                                        GarageArea = 360,
                                                         GarageYrBlt = YearRemodAdd,
                                                         GarageQual = "TA",
                                                         GarageCond = "TA")] 
@@ -176,14 +180,14 @@ full.dt[is.na(BsmtExposure), BsmtExposure := "None"]
 full.dt[is.na(BsmtQual) & BsmtFinType1 == "Unf" , BsmtQual := "TA"]
 full.dt[is.na(BsmtQual), BsmtQual := "None"]
 full.dt[is.na(BsmtCond), BsmtCond := "None"]
-
-
-
-tmp <- full.dt[is.na(BsmtQual) | is.na(BsmtExposure),] 
-
+full.dt[is.na(BsmtFinType1), BsmtFinType1 := "None"]
+full.dt[is.na(BsmtFinType2) & BsmtFinSF2 > 0, BsmtFinType2 := "Unf"]
+full.dt[is.na(BsmtFinType2), BsmtFinType2 := "None"]
+full.dt[is.na(BsmtFinSF1),':=' (BsmtFinSF1 = 0, BsmtFinSF2 = 0, BsmtUnfSF = 0, TotalBsmtSF = 0)] 
+full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)] 
 ##  
 
-
+## Did not (yet) impute all missing values
 ###################################################################
 #### Feature engineering                                       ####
 ###################################################################
