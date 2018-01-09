@@ -191,7 +191,8 @@ full.dt[is.na(BsmtFinSF1),':=' (BsmtFinSF1 = 0, BsmtFinSF2 = 0, BsmtUnfSF = 0, T
 full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)] 
 ## FireplaceQu  
 full.dt[is.na(FireplaceQu), FireplaceQu := "None"]
-
+## LotFrontage
+full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
 ## Did not (yet) impute all missing values
 ###################################################################
 #### Feature engineering                                       ####
