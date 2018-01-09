@@ -155,3 +155,39 @@ print(countIsNA.df)
 ## zero variance
 zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
                                         foreach = T, allowParallel = T)
+###################################################################
+#### Impute missing values                                     ####
+###################################################################
+## Kitchen
+full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
+## Garage
+full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
+                                                        GarageCars =1,
+                                                        GarageArea= 360,
+                                                        GarageYrBlt = YearRemodAdd,
+                                                        GarageQual = "TA",
+                                                        GarageCond = "TA")] 
+full.dt[is.na(GarageFinish), GarageFinish := "None"]
+full.dt[is.na(GarageQual), GarageQual := "None"]
+full.dt[is.na(GarageCond), GarageCond := "None"]
+## Basement
+full.dt[is.na(BsmtExposure) & BsmtFinType1 == "Unf" , BsmtExposure := "No"]
+full.dt[is.na(BsmtExposure), BsmtExposure := "None"]
+full.dt[is.na(BsmtQual) & BsmtFinType1 == "Unf" , BsmtQual := "TA"]
+full.dt[is.na(BsmtQual), BsmtQual := "None"]
+full.dt[is.na(BsmtCond), BsmtCond := "None"]
+
+
+
+tmp <- full.dt[is.na(BsmtQual) | is.na(BsmtExposure),] 
+
+##  
+
+
+###################################################################
+#### Feature engineering                                       ####
+###################################################################
+
+
+
+
