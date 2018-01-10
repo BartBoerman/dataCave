@@ -145,7 +145,7 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 1200,
+  max_runtime_secs = 300,
   stopping_rounds = 2,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
