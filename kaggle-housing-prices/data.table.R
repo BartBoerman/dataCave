@@ -98,11 +98,11 @@ variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, cl
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
-                     "OverallCond"     ## Rates the overall condition of the house
+                     "OverallCond",     ## Rates the overall condition of the house
                      ## Import year and months as integers.
                      #"MoSold",           
-                     #"YrSold",        
-                     #"YearRemodAdd"   
+                     "YrSold",        
+                     "YearRemodAdd"   
                      #"YearBuilt",     
                      #"GarageYrBlt"    
 )
@@ -144,6 +144,8 @@ full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","G
 full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec","BLQ","ALQ","GLQ"))]
 ## FireplaceQu (contains NA's), fireplace quality
 full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## Electrical
+full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA","SBrkr"))]
 ## Did not (yet) convert all possible factors to hierarchical.
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
@@ -193,11 +195,39 @@ full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)]
 full.dt[is.na(FireplaceQu), FireplaceQu := "None"]
 ## LotFrontage
 full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
-## Did not (yet) impute all missing values
+## MSZoning
+## RL for missing MSZoning in Mitchel because GrLivArea is greater then max of RM
+## Not sure (yet) for missing MSZoning in IDOTRR. RM is most common in IDOTRR but might be wrong
+full.dt[is.na(MSZoning) & Neighborhood == "Mitchel", MSZoning := "RL"]
+full.dt[is.na(MSZoning) & Neighborhood == "IDOTRR", MSZoning  := "RM"]
+## Electrical
+## Most common value for neighborhood Timber is SBrkr
+full.dt[is.na(Electrical) , Electrical  := "SBrkr"]
+## Exterior
+## Most common for neighborhood and large total square footage is "MetalSd"
+full.dt[is.na(Exterior1st),':=' (Exterior1st = "MetalSd",Exterior2nd = "MetalSd")]
+## MasVnrType and MasVnrArea. Taking the easy way out here
+full.dt[is.na(MasVnrType),':=' (MasVnrType = "None", MasVnrArea = 0)]
+## SaleType
+full.dt[is.na(SaleType), SaleType := "WD"]
+## Functional
+full.dt[is.na(Functional), Functional := "Typ"]
+## MiscFeature
+full.dt[is.na(MiscFeature), MiscFeature := "None"]
 ###################################################################
 #### Feature engineering                                       ####
 ###################################################################
-
+## Total square footage porche
+full.dt[,porchTotalSF := (OpenPorchSF + EnclosedPorch + ThreeSsnPorch + ScreenPorch)]
+## Total square footage
+full.dt[,totalSF := (TotalBsmtSF + FirstFlrSF + SecondFlrSF)]
+## Update variablesSquareFootage
+variablesSquareFootage <- c(variablesSquareFootage,"totalSF", "porchTotalSF")
+###################################################################
+#### Removed                                                   ####
+###################################################################
+## no variance 
+full.dt[, Utilities  := NULL] ## just one record with none
 
 
 

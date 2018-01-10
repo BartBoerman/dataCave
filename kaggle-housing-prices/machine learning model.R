@@ -22,7 +22,7 @@ response <- "SalePrice"
 ## remove outliers
 full.dt <- full.dt[!(Id %in% outliers.Id),]
 ## convert hierarchical factors to integers
-changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1")
+changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","Electrical")
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ## remove variables with zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
@@ -54,7 +54,9 @@ setkey(full.dt,"dataPartition")
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 ## upload to h2o cloud which converts data to a h2o data frame (hex)
+h2o.rm("train.hex")
 train.hex <- as.h2o(train.dt,"train.hex")
+h2o.rm("test.hex")
 test.hex <- as.h2o(test.dt,"test.hex")
 ## split training data into training and validation data sets
 splits <- h2o.splitFrame(
@@ -63,6 +65,7 @@ splits <- h2o.splitFrame(
   seed=333)    ##  setting a seed will ensure reproducible results (not R's seed)
 
 train.hex <- h2o.assign(splits[[1]], "train.hex")   
+h2o.rm("validate.hex")
 validate.hex <- h2o.assign(splits[[2]], "valid.hex")  
 ###################################################################
 #### Gradient Boosting Machine (GBM)                           ####
@@ -113,10 +116,10 @@ glm <- h2o.glm(
           validation_frame = validate.hex,     ## the H2O frame for validation (not required)
           x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
           y=response,                          ## what we are predicting,alternativaly, e.g. 81
-          nfolds = 5,
+          nfolds = 3,
           fold_assignment = "Modulo", 
           ignore_const_cols = TRUE,
-          solver = "L_BFGS",
+          solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
           early_stopping = TRUE,
           max_iterations = 100,
           model_id = "glm_housing_v1",
@@ -142,9 +145,9 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 300,
-  stopping_rounds = 3,
-  stopping_tolerance = 0.01,
+  max_runtime_secs = 1200,
+  stopping_rounds = 2,
+  stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
 )
 autoMl@leaderboard ## Models evaluated bu h2o
@@ -161,83 +164,15 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
-###################################################################
-#### Try outs                                                  ####
-###################################################################
 
 
 
-glm <- h2o.glm(
-  training_frame = train.hex,          ## the H2O frame for training
-  validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-  x=featuresTopTen,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-  y=response,                          ## what we are predicting,alternativaly, e.g. 81
-  nfolds = 3,
-  fold_assignment = "Modulo", 
-  ignore_const_cols = TRUE,
-  solver = "L_BFGS",
-  early_stopping = TRUE,
-  max_iterations = 50,
-  model_id = "glm_housing_v1",
-  seed = 333)
-## Extract specific metric
-h2o.rmsle(glm, train = T)
-h2o.rmsle(glm, valid = T)
-h2o.rmse(h2o.performance(glm, xval = T))
-
-gbm <- h2o.gbm(
-  training_frame = train.hex,          ## the H2O frame for training
-  validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-  x=featuresTopTen,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-  y=response,                          ## what we are predicting,alternativaly, e.g. 81
-  nfolds = 3,
-  ntrees = 40, # first do 1000, then plot, then adjust to 40
-  learn_rate=0.1,
-  #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
-  sample_rate = 0.8,                   ## sample 80% of rows per tree
-  col_sample_rate = 0.8,               ## sample 80% of columns per split
-  ignore_const_cols = TRUE,
-  stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
-  score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
-  model_id = "gbm_housing_v1",         ## name the model in H2O
-  seed = 333)                          ## Set the random seed for reproducability
-## performance of the model
-h2o.performance(gbm, newdata = train.hex)
-h2o.performance(gbm, newdata = validate.hex)
-## Extract specific metric
-h2o.rmsle(gbm, train = T)
-h2o.rmsle(gbm, valid = T)
-h2o.rmse(h2o.performance(gbm, xval = T))
-
-
-autoMl <- h2o.automl(
-  training_frame = train.hex,        ## the H2O frame for training
-  validation_frame = validate.hex,      ## the H2O frame for validation (not required)
-  x=featuresTopTen,                        ## the predictor columns, by column index
-  y=response,                          ## the target index (what we are predicting)
-  stopping_metric = "RMSLE",
-  nfolds = 3,
-  seed = 333,
-  max_runtime_secs = 300,
-  stopping_rounds = 3,
-  stopping_tolerance = 0.01,
-  project_name = "KaggleHousingPrices"
-)
-autoMl@leaderboard ## Models evaluated bu h2o
-## Extract specific metric
-h2o.rmsle(autoMl@leader, train = T)
-h2o.rmsle(autoMl@leader, valid = T)
-
-###################################################################
-finalPredictions <- h2o.predict(
-  object = autoMl@leader
-  ,newdata = test.hex)
-names(finalPredictions) <- "SalePrice"
-finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
-submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
-
-# Test/Validation dataset column 'YearBuilt' has levels not trained on: [1879, 1895, 1896, 1901, 1902, 1907]
-# Test/Validation dataset column 'GarageYrBlt' has levels not trained on: [1895, 1896, 1917, 1919, 1943, 2207]
-# Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
-
+# remove data.frames before uploading solves data type error?
+# Warning messages:
+#   1: In doTryCatch(return(expr), name, parentenv, handler) :
+#   Test/Validation dataset column 'YearBuilt' has levels not trained on: [1879, 1895, 1896, 1901, 1902, 1907]
+# 2: In doTryCatch(return(expr), name, parentenv, handler) :
+#   Test/Validation dataset column 'GarageYrBlt' has levels not trained on: [1895, 1896, 1917, 1919, 1943, 2207]
+# 3: In doTryCatch(return(expr), name, parentenv, handler) :
+#   Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
+# 
