@@ -226,8 +226,6 @@ variablesSquareFootage <- c(variablesSquareFootage,"totalSF", "porchTotalSF")
 ###################################################################
 #### Removed                                                   ####
 ###################################################################
-## no variance 
-full.dt[, Utilities  := NULL] ## just one record with none
 
 
 
