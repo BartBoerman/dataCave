@@ -122,7 +122,7 @@ setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","Secon
 changeColType <- c(variablesSquareFootage, variablesCounts, variablesValues)
 full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
-changeColType <- variablesFactor
+changeColType <- setdiff(variablesFactor, "dataPartition") 
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 ###################################################################
 #### Ordered factors                                           ####

@@ -28,7 +28,7 @@ full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
                                      freqCut = 10, uniqueCut = 2,
                                      foreach = T, allowParallel = T) ## Select variables with (near) zero veriance
-full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
+full.dt <- full.dt[, (zeroVarianceVariables):=NULL] ## Drop variables
 variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
 variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
 ## log transform skewed variables (including response variable)
