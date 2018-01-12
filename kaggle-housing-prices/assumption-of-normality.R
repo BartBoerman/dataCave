@@ -5,8 +5,6 @@
 ###############################################################################
 require(e1071)
 
-full.dt <- full.dt[!(Id %in% outliers.Id),]
-
 x <- na.omit(full.dt$SalePrice)
 
 # skewness and kurtosis, they should be around (0,3)

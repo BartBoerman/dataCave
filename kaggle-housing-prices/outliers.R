@@ -23,8 +23,37 @@ train.dt[,.(count=.N), by=Neighborhood][order(Neighborhood)]
 ## Analyse outliers per neighborhood
 
 ## Let's just remove them and see....
-outliers.SalePrice.Id <-  train.dt[SalePrice > salePrice.iqr,Id]
-outliers.SalePrice.dt <- full.dt[Id %in% outliers.Id,]
+
+## did it, saw it, it was painfull. Let's not remove them.
+## outliers.SalePrice.Id <-  train.dt[SalePrice > salePrice.iqr,Id]
+## outliers.SalePrice.dt <- full.dt[Id %in% outliers.Id,]
+## full.dt <- full.dt[!(Id %in% outliers.Id) & !(Id %in% outliers.SalePrice.Id)  ,]
+
+###################################################################
+#### IQR (interquartile range) sale price per Neighborhood     ####
+###################################################################
+train.dt[,.(IQR=quantile(SalePrice, 0.75)[[1]] + 1.5 * IQR(SalePrice), max=max(SalePrice)), by=Neighborhood][order(Neighborhood)]
+
+tmp.dt <- train.dt[,.(count=.N,
+                mean=mean(SalePrice, na.rm = T),
+                quantile_third=quantile(SalePrice, .75, na.rm=T),
+                quantile_95=quantile(SalePrice, .95, na.rm=T),
+                iqr =IQR(SalePrice) * 1.5,
+                threshold = quantile(SalePrice, .75, na.rm=T) + (IQR(SalePrice) * 1.5),
+                max=max(SalePrice, na.rm = T)) 
+           ,by=Neighborhood
+           ][order(Neighborhood)]
+tmp.dt <- tmp.dt[threshold < max,]
+
+
+full.dt[, SalePriceThreshold := quantile(SalePrice, .75, na.rm=T) + (IQR(SalePrice, na.rm=T) * 1.5), by=.(Neighborhood)]
+
+
+tmp.dt <- full.dt[SalePrice >= SalePriceThreshold,]
+
+## which is 33% of the data
+
+
 
 
 
