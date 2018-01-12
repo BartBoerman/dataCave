@@ -117,16 +117,20 @@ glm <- h2o.glm(
           validation_frame = validate.hex,     ## the H2O frame for validation (not required)
           x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
           y=response,                          ## what we are predicting,alternativaly, e.g. 81
-          family = "gaussian",
-          ## standardize = TRUE,               ## Scaling already done.
+          family = "gaussian",                      
+          alpha =  c(0.0,0.5,1.0),
+          lambda_search = TRUE,
+          ## nlambdas = 30,
+          standardize = FALSE,               ## Scaling already done.
           missing_values_handling = "Skip",
           remove_collinear_columns = TRUE,
           nfolds = 3,
-          fold_assignment = "Modulo", 
+          fold_assignment = "Modulo",
           ignore_const_cols = TRUE,
-          solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
+          solver = "COORDINATE_DESCENT", # "L_BFGS" "COORDINATE_DESCENT"
           early_stopping = TRUE,
-          max_iterations = 100,
+          max_iterations = 300,
+          max_runtime_secs = 300,
           model_id = "glm_housing_v1",
           seed = 333)
 ## performance of the model
@@ -135,7 +139,7 @@ h2o.performance(glm, newdata = validate.hex)
 ## Extract specific metric
 h2o.rmsle(glm, train = T)
 h2o.rmsle(glm, valid = T)
-h2o.rmse(h2o.performance(glm, xval = T))
+h2o.rmsle(h2o.performance(glm, xval = T))
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
 glm@model$cross_validation_metrics_summary
@@ -172,13 +176,16 @@ h2o.rmsle(autoMl@leader, valid = T)
 ###################################################################
 #### Predict and submit                                        ####
 ###################################################################
+autoStack <- h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180112_120335")
+autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180112_120335_model_0")
+autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180112_125300_model_53")   
 finalPredictions <- h2o.predict(
-  object = autoMl@leader
+  object =  autoGBM ##autoMl@leader
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
+h2o.exportFile(submission, path = "submission.h2o.autGBM.csv", force = T)
 
 
 
