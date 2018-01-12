@@ -4,7 +4,6 @@
 ##http://www.listendata.com/2016/10/r-data-table.html
 ##http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
 ##http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
-##
 ###################################################################
 #### Dependencies                                              ####
 ###################################################################
@@ -96,19 +95,25 @@ variablesValues <- c(
 )
 ## Factors
 variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
+variablesFactor <- setdiff(variablesFactor, "dataPartition") 
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
                      "OverallCond",     ## Rates the overall condition of the house
-                     ## Import year and months as integers.
+                     ## Only YrSold as factor, others as integers.
                      #"MoSold",           
-                     "YrSold",        
-                     "YearRemodAdd"   
+                     "YrSold"        
+                     #"YearRemodAdd"   
                      #"YearBuilt",     
                      #"GarageYrBlt"    
 )
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
+###################################################################
+#### Data cleansing                                            ####
+###################################################################
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
+full.dt[MSSubClass  == 150, MSSubClass:= 160] ## 150 not in training set
 ###################################################################
 #### Data engineering                                          ####
 ###################################################################
@@ -147,7 +152,10 @@ full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec"
 full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## Electrical
 full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA","SBrkr"))]
-## Did not (yet) convert all possible factors to hierarchical.
+## Fence
+full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))]
+## PoolQC
+full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Fa","Gd","Ex"))]
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
 #### Descriptive statistics                                    ####
@@ -215,6 +223,14 @@ full.dt[is.na(SaleType), SaleType := "WD"]
 full.dt[is.na(Functional), Functional := "Typ"]
 ## MiscFeature
 full.dt[is.na(MiscFeature), MiscFeature := "None"]
+## Alley
+full.dt[is.na(Alley), Alley := "None"]
+## Utilities
+full.dt[is.na(Utilities), Utilities := "AllPub"]
+## PoolQC
+full.dt[is.na(PoolQC), PoolQC := "None"]
+## Fence
+full.dt[is.na(Fence), Fence := "None"]
 ###################################################################
 #### Feature engineering                                       ####
 ###################################################################
@@ -224,11 +240,3 @@ full.dt[,porchTotalSF := (OpenPorchSF + EnclosedPorch + ThreeSsnPorch + ScreenPo
 full.dt[,totalSF := (TotalBsmtSF + FirstFlrSF + SecondFlrSF)]
 ## Update variablesSquareFootage
 variablesSquareFootage <- c(variablesSquareFootage,"totalSF", "porchTotalSF")
-###################################################################
-#### Removed                                                   ####
-###################################################################
-## no variance 
-full.dt[, Utilities  := NULL] ## just one record with none
-
-
-
