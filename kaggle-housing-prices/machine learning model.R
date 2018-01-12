@@ -22,7 +22,7 @@ response <- "SalePrice"
 ## remove outliers
 full.dt <- full.dt[!(Id %in% outliers.Id),]
 ## convert hierarchical factors to integers
-changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","Electrical")
+changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","Electrical","Fence","PoolQC")
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ## remove variables with zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
@@ -116,6 +116,10 @@ glm <- h2o.glm(
           validation_frame = validate.hex,     ## the H2O frame for validation (not required)
           x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
           y=response,                          ## what we are predicting,alternativaly, e.g. 81
+          family = "gaussian",
+          standardize = TRUE,                  ## Standardize numeric columns to have zero mean and unit varianc
+          missing_values_handling = "Skip",
+          remove_collinear_columns = TRUE,
           nfolds = 3,
           fold_assignment = "Modulo", 
           ignore_const_cols = TRUE,
