@@ -148,7 +148,7 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
+h2o.exportFile(submission, path = "submission.h2o.glm.csv", force = T)
 ###################################################################
 #### Automated machine learning                                ####
 ###################################################################
@@ -160,7 +160,7 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 1200,
+  max_runtime_secs = 300,
   stopping_rounds = 2,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
