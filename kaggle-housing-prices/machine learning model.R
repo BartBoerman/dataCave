@@ -107,7 +107,7 @@ varImportance.df <- as.data.frame(cbind(varImportance$variable, varImportance$pe
 names(varImportance.df) <- c("variable","importance")
 varImportance.df$importance <- round(as.numeric(as.character(varImportance.df$importance)),3)
 featuresTopTen <-head(varImportance$variable)
-write.csv(varImportance.df, file = "varImp.csv")
+write.csv(varImportance.df, file = "varImp.csv") ## For future reference
 ###################################################################
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
@@ -137,7 +137,17 @@ h2o.rmsle(glm, valid = T)
 h2o.rmse(h2o.performance(glm, xval = T))
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
-gbm@model$cross_validation_metrics_summary
+glm@model$cross_validation_metrics_summary
+###################################################################
+#### GLM Predict and submit                                    ####
+###################################################################
+finalPredictions <- h2o.predict(
+  object = glm
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.h2o.autMl.csv", force = T)
 ###################################################################
 #### Automated machine learning                                ####
 ###################################################################
