@@ -5,7 +5,7 @@
 ###############################################################################
 require(e1071)
 
-x <- na.omit(full.dt$SalePrice)
+x <- na.omit(full.dt$GarageArea)
 
 # skewness and kurtosis, they should be around (0,3)
 skewness(x)
@@ -36,6 +36,7 @@ plotNormalHistogram(T_cub)
 
 T_tuk = transformTukey(x, plotit=FALSE) ## Tukey’s Ladder of Powers transformation
 plotNormalHistogram(T_tuk)
+
 
 
 ###############################################################################
