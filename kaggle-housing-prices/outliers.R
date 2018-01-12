@@ -11,7 +11,9 @@ outliers.dt <- full.dt[Id %in% outliers.Id,]
 ###################################################################
 #### IQR (interquartile range) sale price                      ####
 ###################################################################
+## calculate threshold based on third quantile + 1.5 * IQR
 salePrice.iqr <- quantile(train.dt$SalePrice, 0.75)[[1]] + 1.5 * IQR(train.dt$SalePrice) ### 3th quantatile + (1.5 * IQR)
+## filter outliers
 outliers.SalePrice.dt <- train.dt[SalePrice > salePrice.iqr ,] 
 nrow(outliers.SalePrice.dt) ## 61 records maybe to many for just removing the records (4,1%)
 train.dt[SalePrice > salePrice.iqr ,.(count=.N), by=Neighborhood][order(Neighborhood)]
@@ -19,6 +21,16 @@ train.dt[,.(count=.N), by=Neighborhood][order(Neighborhood)]
 #### Alternatives (to do)
 ## Set value to 0.95 quantile
 ## Analyse outliers per neighborhood
+
+## Let's just remove them and see....
+outliers.SalePrice.Id <-  train.dt[SalePrice > salePrice.iqr,Id]
+outliers.SalePrice.dt <- full.dt[Id %in% outliers.Id,]
+
+
+
+
+
+
 
 
 
