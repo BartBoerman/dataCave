@@ -146,7 +146,10 @@ full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec"
 full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## Electrical
 full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA","SBrkr"))]
-## Did not (yet) convert all possible factors to hierarchical.
+## Fence
+full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))]
+## PoolQC
+full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Fa","Gd","Ex"))]
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ###################################################################
 #### Descriptive statistics                                    ####
@@ -214,6 +217,14 @@ full.dt[is.na(SaleType), SaleType := "WD"]
 full.dt[is.na(Functional), Functional := "Typ"]
 ## MiscFeature
 full.dt[is.na(MiscFeature), MiscFeature := "None"]
+## Alley
+full.dt[is.na(Alley), Alley := "None"]
+## Utilities
+full.dt[is.na(Utilities), Utilities := "AllPub"]
+## PoolQC
+full.dt[is.na(PoolQC), PoolQC := "None"]
+## Fence
+full.dt[is.na(Fence), Fence := "None"]
 ###################################################################
 #### Feature engineering                                       ####
 ###################################################################
