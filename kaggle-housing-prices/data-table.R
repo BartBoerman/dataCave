@@ -95,6 +95,7 @@ variablesValues <- c(
 )
 ## Factors
 variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
+variablesFactor <- setdiff(variablesFactor, "dataPartition") 
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
@@ -122,7 +123,7 @@ setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","Secon
 changeColType <- c(variablesSquareFootage, variablesCounts, variablesValues)
 full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
-changeColType <- setdiff(variablesFactor, "dataPartition") 
+changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 ###################################################################
 #### Ordered factors                                           ####
