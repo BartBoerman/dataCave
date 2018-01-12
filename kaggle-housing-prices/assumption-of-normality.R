@@ -1,9 +1,8 @@
 ## https://stats.stackexchange.com/questions/52293/r-qqplot-how-to-see-whether-data-are-normally-distributed
+## http://rcompanion.org/handbook/I_12.html
 ###############################################################################
 #### Skewness and kurtosis                                                 ####                                                   ####
 ###############################################################################
-## http://rcompanion.org/handbook/I_12.html
-
 require(e1071)
 
 full.dt <- full.dt[!(Id %in% outliers.Id),]
@@ -65,10 +64,28 @@ T_box.inverse <- BoxCoxTrans.inverse(b2,p)
 T_box.compare <- cbind(train.dt$SalePrice,r)
 
 plotNormalHistogram(T_box)
+
+# qq-plot: you should observe a good fit of the straight line
+qqnorm(T_box,  ylab="Sample Quantiles for x")
+qqline(T_box,  col="red")
+
+# p-plot: you should observe a good fit of the straight line
+probplot(T_box, qdist=qnorm)
+
+
 ###############################################################################
 #### BoxCox transform response variable                                    ####                                                   ####
 ###############################################################################
 T_box.fit <- BoxCoxTrans(y = full.dt$SalePrice, na.rm = TRUE)
 T_box <- predict(b2, train.dt$SalePrice)
 plotNormalHistogram(T_box)
+
+
+# qq-plot: you should observe a good fit of the straight line
+qqnorm(T_box,  ylab="Sample Quantiles for x")
+qqline(T_box,  col="red")
+
+# p-plot: you should observe a good fit of the straight line
+probplot(T_box, qdist=qnorm)
+
 
