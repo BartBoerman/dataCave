@@ -93,7 +93,7 @@ h2o.performance(gbm, newdata = validate.hex)
 ## Extract specific metric
 h2o.rmsle(gbm, train = T)
 h2o.rmsle(gbm, valid = T)
-h2o.rmse(h2o.performance(gbm, xval = T))
+h2o.rmsle(h2o.performance(gbm, xval = T))
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
 gbm@model$cross_validation_metrics_summary
