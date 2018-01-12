@@ -42,7 +42,7 @@ full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewed
 ## scale (excluding response)
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
 ## disabled to check performance of glm with standardize TRUE
-# full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
 ###################################################################
 #### Select features                                           ####
 ###################################################################
@@ -118,7 +118,7 @@ glm <- h2o.glm(
           x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
           y=response,                          ## what we are predicting,alternativaly, e.g. 81
           family = "gaussian",
-          standardize = TRUE,                  ## Standardize numeric columns to have zero mean and unit varianc
+          ## standardize = TRUE,               ## Scaling already done.
           missing_values_handling = "Skip",
           remove_collinear_columns = TRUE,
           nfolds = 3,
