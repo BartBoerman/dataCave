@@ -109,6 +109,11 @@ variablesFactor <- c(variablesFactor,
 # <- sapply(names(full.dt),function(x){class(full.dt[[x]])})
 # <-names(feature_classes[feature_classes != "character"])
 ###################################################################
+#### Data cleansing                                            ####
+###################################################################
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
+full.dt[MSSubClass  == 150, MSSubClass:= 160] ## 150 not in training set
+###################################################################
 #### Data engineering                                          ####
 ###################################################################
 ## In R first character can not be a number in variable names
