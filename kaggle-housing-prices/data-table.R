@@ -239,7 +239,3 @@ full.dt[,porchTotalSF := (OpenPorchSF + EnclosedPorch + ThreeSsnPorch + ScreenPo
 full.dt[,totalSF := (TotalBsmtSF + FirstFlrSF + SecondFlrSF)]
 ## Update variablesSquareFootage
 variablesSquareFootage <- c(variablesSquareFootage,"totalSF", "porchTotalSF")
-###################################################################
-#### Data cleansing                                            ####
-###################################################################
-full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007]
