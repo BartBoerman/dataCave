@@ -22,7 +22,7 @@ response <- "SalePrice"
 ## remove outliers
 full.dt <- full.dt[!(Id %in% outliers.Id),]
 ## convert hierarchical factors to integers
-#changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","Electrical","Fence","PoolQC")
+changeColType <- c("FireplaceQu","OverallQual","OverallCond","KitchenQual","GarageFinish","ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","Electrical","Fence","PoolQC")
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ## remove variables with zero variance
 zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
@@ -160,7 +160,7 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 300,
+  max_runtime_secs = 3600,
   stopping_rounds = 2,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
