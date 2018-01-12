@@ -101,8 +101,8 @@ variablesFactor <- c(variablesFactor,
                      "OverallCond",     ## Rates the overall condition of the house
                      ## Import year and months as integers.
                      #"MoSold",           
-                     "YrSold",        
-                     "YearRemodAdd"   
+                     "YrSold"        
+                     #"YearRemodAdd"   
                      #"YearBuilt",     
                      #"GarageYrBlt"    
 )
@@ -224,8 +224,6 @@ full.dt[,totalSF := (TotalBsmtSF + FirstFlrSF + SecondFlrSF)]
 ## Update variablesSquareFootage
 variablesSquareFootage <- c(variablesSquareFootage,"totalSF", "porchTotalSF")
 ###################################################################
-#### Removed                                                   ####
+#### Data cleansing                                            ####
 ###################################################################
-
-
-
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007]

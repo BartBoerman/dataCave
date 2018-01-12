@@ -48,6 +48,9 @@ code.r{ /* Code block */
 pre { /* Code block - determines code spacing between lines */
     font-size: 14px;
 }
+th.sorting { /* DT column headers  */
+    text-align: left;
+}
 </style>
 # Introduction
 
@@ -77,19 +80,23 @@ In addition I want to gain and share some basic knowledge of
 - **psych**, descriptive analytics, skewness and kurtosis
 - **caret**, (near) zero variance
 ```{r setup, message=FALSE, warning=FALSE, paged.print=FALSE}
-require(knitr) ## a general-purpose programming engine
+###################################################################
+#### Dependencies                                              ####
+###################################################################
+require(knitr)      ## a general-purpose programming engine
 knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
-require(data.table) ## fast data wrangling
-require(h2o)        ## machine learning algorithmes
+require(DT)         ##  display data in html tables
+require(data.table) ## fast data wrangling and analysis
 require(psych)      ## descriptive statistics, skewness and kurtosis
-require(caret)      ## zero variance 
-require(DT)         ## Display interactive tables in html
+require(caret)      ## (near) zero variance
 ```
 
 # Get data into R
 
 ```{r}
-#### Fetch data
+###################################################################
+#### Get data                                                  ####
+###################################################################
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -112,7 +119,7 @@ test.dt <- fread(input = "test.csv",
                  blank.lines.skip = T,
                  data.table = T
 ) 
-## Create one data set for feature engineering 
+## Create one data set for feature engineering. 
 train.dt[, dataPartition:="train"]
 test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
@@ -123,11 +130,13 @@ full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 
 ## Variables in raw data
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 ## Data types
 variableTypes.df <- cbind(as.data.frame(names(full.dt)),as.data.frame(sapply(full.dt, class)))
 names(variableTypes.df) <- c("variable","type")
-datatable(variableTypes.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
+datatable(variableTypes.df, rownames = F, 
+          caption = "List of variables with data type", 
+          options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
 ## Definitions
@@ -173,16 +182,25 @@ variablesValues <- c(
 )
 ## Factors
 variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
-variablesFactor <- c(variablesFactor,  ## Add integers which are factors
+variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
-                     "OverallCond"     ## Rates the overall condition of the house
+                     "OverallCond",     ## Rates the overall condition of the house
+                     ## Import year and months as integers.
+                     #"MoSold",           
+                     "YrSold"        
+                     #"YearRemodAdd"   
+                     #"YearBuilt",     
+                     #"GarageYrBlt"    
 )
 ```
 
-## Data conversion
+## Data engineering
 
 ```{r}
+###################################################################
+#### Data engineering                                          ####
+###################################################################
 ## In R first character can not be a number in variable names
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
 ## Set columns to numeric
@@ -191,107 +209,132 @@ full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
 changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
+###################################################################
+#### Ordered factors                                           ####
+###################################################################
+## OverallQual, rates the overall material and finish of the house
+full.dt[,OverallQual:=ordered(OverallQual, levels = c(1:10))]
+## OverallCond, rates the overall condition of the house
+full.dt[,OverallCond:=ordered(OverallCond, levels = c(1:10))]
+## KitchenQual, kitchen quality
+full.dt[,KitchenQual:=ordered(KitchenQual, levels = c("Po","Fa","TA","Gd","Ex"))]
+## GarageFinish (contains NA's)
+full.dt[,GarageFinish:=ordered(GarageFinish, levels = c("None","Unf","RFn","Fin"))]
+## ExterQual, evaluates the quality of the material on the exterior  
+full.dt[,ExterQual:=ordered(ExterQual, levels = c("Po","Fa","TA","Gd","Ex"))]
+## ExterCond, evaluates the present condition of the material on the exterior
+full.dt[,ExterCond:=ordered(ExterCond, levels = c("Po","Fa","TA","Gd","Ex"))]
+## BsmtQual (contains NA's), evaluates the height of the basement
+full.dt[,BsmtQual:=ordered(BsmtQual, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## BsmtCond (contains NA's), evaluates the general condition of the basement
+full.dt[,BsmtCond:=ordered(BsmtCond, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## BsmtExposure (contains NA's), refers to walkout or garden level walls
+full.dt[,BsmtExposure:=ordered(BsmtExposure, levels = c("None","No","Mn","Av","Gd"))]
+## BsmtFinType1 (contains NA's), rating of basement finished area
+full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec","BLQ","ALQ","GLQ"))]
+## FireplaceQu (contains NA's), fireplace quality
+full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## Electrical
+full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA","SBrkr"))]
+## Did not (yet) convert all possible factors to hierarchical.
+## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ```
 
 # Descriptive statistics
 
 ## statisticts
 
-```{r}
-descStats <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
-datatable(round(descStats,2), rownames = T, options = list(pageLength = 8)) ## Interactive HTML table
-```
-
-## Missing values
-
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+###################################################################
+#### Descriptive statistics                                    ####
+###################################################################
+## statisticts
+descStats.df <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
+datatable(round(descStats.df,2), rownames = T,
+          caption = "Descriptive statistics", 
+          options = list(pageLength = 8)) ## Interactive HTML table
+## na values
 countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
-datatable(countIsNA.df, options = list(pageLength = 8)) ## Interactive HTML table
+datatable(countIsNA.df, rownames = T, 
+          caption = "Variables with missing values", 
+          options = list(pageLength = 8)) ## Interactive HTML table
+## zero variance
+zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
+                                        foreach = T, allowParallel = T)
+
+datatable(round(subset(zeroVarianceVariables.df, nzv == TRUE, 
+                       select =     c("freqRatio","percentUnique")),2), 
+          rownames = T,
+          caption = "Variables with (near) zero variance", 
+          options = list(pageLength = 8)) ## Interactive HTML table
 ```
 
-## (Near) zero variance
+# Data Cleansing
+
+## Impute missing values
 
 ```{r}
-zeroVarianceVariables <- nearZeroVar(full.dt, names = T, 
-                                     freqCut = 19, uniqueCut = 10,
-                                     foreach = T, allowParallel = T) ## Select variables with (near) zero veriance
-## for presentation purposes:
-zeroVarianceVariables.df <- nearZeroVar(full.dt,names = T, saveMetrics = T, 
-                                        foreach = T, 
-                                        allowParallel = T)
-zeroVarianceVariables.df$variable <- row.names(zeroVarianceVariables.df)
-zeroVarianceVariables.df <- zeroVarianceVariables.df[zeroVarianceVariables.df$nzv == "TRUE", c("variable","freqRatio","percentUnique")]
-zeroVarianceVariables.df[,-1] <-round(zeroVarianceVariables.df[,-1],2)
-datatable(zeroVarianceVariables.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
+###################################################################
+#### Impute missing values                                     ####
+###################################################################
+## Kitchen
+full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
+## Garage
+full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
+                                                        GarageCars = 1,
+                                                        GarageArea = 360,
+                                                        GarageYrBlt = YearRemodAdd,
+                                                        GarageQual = "TA",
+                                                        GarageCond = "TA")] 
+full.dt[is.na(GarageFinish), GarageFinish := "None"]
+full.dt[is.na(GarageQual), GarageQual := "None"]
+full.dt[is.na(GarageCond), GarageCond := "None"]
+full.dt[is.na(GarageType), GarageType := "None"]
+full.dt[is.na(GarageYrBlt), GarageYrBlt := 0]
+## Basement
+full.dt[is.na(BsmtExposure) & BsmtFinType1 == "Unf" , BsmtExposure := "No"]
+full.dt[is.na(BsmtExposure), BsmtExposure := "None"]
+full.dt[is.na(BsmtQual) & BsmtFinType1 == "Unf" , BsmtQual := "TA"]
+full.dt[is.na(BsmtQual), BsmtQual := "None"]
+full.dt[is.na(BsmtCond), BsmtCond := "None"]
+full.dt[is.na(BsmtFinType1), BsmtFinType1 := "None"]
+full.dt[is.na(BsmtFinType2) & BsmtFinSF2 > 0, BsmtFinType2 := "Unf"]
+full.dt[is.na(BsmtFinType2), BsmtFinType2 := "None"]
+full.dt[is.na(BsmtFinSF1),':=' (BsmtFinSF1 = 0, BsmtFinSF2 = 0, BsmtUnfSF = 0, TotalBsmtSF = 0)] 
+full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)] 
+## FireplaceQu  
+full.dt[is.na(FireplaceQu), FireplaceQu := "None"]
+## LotFrontage
+full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
+## MSZoning
+## RL for missing MSZoning in Mitchel because GrLivArea is greater then max of RM
+## Not sure (yet) for missing MSZoning in IDOTRR. RM is most common in IDOTRR but might be wrong
+full.dt[is.na(MSZoning) & Neighborhood == "Mitchel", MSZoning := "RL"]
+full.dt[is.na(MSZoning) & Neighborhood == "IDOTRR", MSZoning  := "RM"]
+## Electrical
+## Most common value for neighborhood Timber is SBrkr
+full.dt[is.na(Electrical) , Electrical  := "SBrkr"]
+## Exterior
+## Most common for neighborhood and large total square footage is "MetalSd"
+full.dt[is.na(Exterior1st),':=' (Exterior1st = "MetalSd",Exterior2nd = "MetalSd")]
+## MasVnrType and MasVnrArea. Taking the easy way out here
+full.dt[is.na(MasVnrType),':=' (MasVnrType = "None", MasVnrArea = 0)]
+## SaleType
+full.dt[is.na(SaleType), SaleType := "WD"]
+## Functional
+full.dt[is.na(Functional), Functional := "Typ"]
+## MiscFeature
+full.dt[is.na(MiscFeature), MiscFeature := "None"]
 ```
 
-## Skewness
+## Other operations
 
 ```{r}
-## skewness of numerical variables
-skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## from psych package
-## keep only features that exceed a threshold for skewness
-skewedVariables <- skewedVariables[skewedVariables > 0.75]
-## for presentation purposes:
-skewedVariables.df <- as.data.frame(skewedVariables)
-names(skewedVariables.df) <- c("skew")
-skewedVariables.df$variable <- row.names(skewedVariables.df)
-skewedVariables.df <- skewedVariables.df[,c("variable","skew")]
-skewedVariables.df[,-1] <-round(skewedVariables.df[,-1],2)
-datatable(skewedVariables.df, rownames = F, options = list(pageLength = 8)) ## Interactive HTML table
+## Typo in GarageYrBlt
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007]
 ```
 
-## Correlation
 
-To do.
-
-# Feature engineering
-
-
-## Engineering
-
-This stuff will be done soon.
-
-# Pre-processing and feature selection
-
-## Set response variable
-
-```{r}
-response <- "SalePrice"
-```
-
-## Remove zero variance variables
-
-Consider engineering to capture information from these variables. On the "to do" list it goes.
-
-```{r}
-full.dt <- full.dt[, -c(zeroVarianceVariables), with = FALSE]
-variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(zeroVarianceVariables))
-variablesValues      <- setdiff(c(variablesValues ), c(zeroVarianceVariables))
-
-```
-
-## Log transform skewed
-
-```{r}
-# Some items of .SDcols are not column names (or are NA)
-# cols <- names(skewedVariables)
-# full.dt[, (cols) := lapply(.SD, function(x) log(x)), .SDcols = cols]
-```
-
-## Scale numerical
-
-```{r}
-varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
-full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
-```
-
-# Feature selection
-
-
-```{r}
-features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
-```
