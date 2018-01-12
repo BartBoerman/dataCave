@@ -41,7 +41,8 @@ skewedVariables <- names(skewedVariables)
 full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewedVariables]
 ## scale (excluding response)
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
-full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+## disabled to check performance of glm with standardize TRUE
+# full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
 ###################################################################
 #### Select features                                           ####
 ###################################################################
