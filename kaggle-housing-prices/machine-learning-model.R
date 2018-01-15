@@ -113,26 +113,22 @@ write.csv(varImportance.df, file = "varImp.csv") ## For future reference
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
 glm <- h2o.glm(
-          training_frame = train.hex,          ## the H2O frame for training
-          validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-          x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-          y=response,                          ## what we are predicting,alternativaly, e.g. 81
-          family = "gaussian",                      
-          alpha =  c(0.0,0.5,1.0),
-          lambda_search = TRUE,
-          ## nlambdas = 30,
-          standardize = FALSE,               ## Scaling already done.
-          missing_values_handling = "Skip",
-          remove_collinear_columns = TRUE,
-          nfolds = 3,
-          fold_assignment = "Modulo",
-          ignore_const_cols = TRUE,
-          solver = "COORDINATE_DESCENT", # "L_BFGS" "COORDINATE_DESCENT"
-          early_stopping = TRUE,
-          max_iterations = 300,
-          max_runtime_secs = 300,
-          model_id = "glm_housing_v1",
-          seed = 333)
+            training_frame = train.hex,          ## the H2O frame for training
+            validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+            x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+            y=response,                          ## what we are predicting,alternativaly, e.g. 81
+            family = "gaussian",
+            ## standardize = TRUE,               ## Scaling already done.
+            missing_values_handling = "Skip",
+            remove_collinear_columns = TRUE,
+            nfolds = 3,
+            fold_assignment = "Modulo", 
+            ignore_const_cols = TRUE,
+            solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
+            early_stopping = TRUE,
+            max_iterations = 100,
+            model_id = "glm_housing_v1",
+            seed = 333)
 ## performance of the model
 h2o.performance(glm, newdata = train.hex)
 h2o.performance(glm, newdata = validate.hex)
