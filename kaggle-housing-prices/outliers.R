@@ -45,17 +45,12 @@ tmp.dt <- train.dt[,.(count=.N,
            ][order(Neighborhood)]
 tmp.dt <- tmp.dt[threshold < max,]
 
-
+###################################################################
+#### IQR (interquartile range) sale price per Neighborhood     ####
+###################################################################
 full.dt[, SalePriceThreshold := quantile(SalePrice, .75, na.rm=T) + (IQR(SalePrice, na.rm=T) * 1.5), by=.(Neighborhood)]
-
-
-tmp.dt <- full.dt[SalePrice >= SalePriceThreshold,]
-
-## which is 33% of the data
-
-
-
-
+full.dt <- full.dt[SalePrice > SalePriceThreshold, SalePrice:=SalePriceThreshold ]
+full.dt[,SalePriceThreshold:=NULL]
 
 
 
