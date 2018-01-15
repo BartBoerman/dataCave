@@ -194,13 +194,17 @@ tmp.dt <- tmp.dt[, c("Id","MoSold","YrSold","Neighborhood","MSZoning","OverallQu
 
 
 ###############################################################################
-#### Convert categorical (factor) variables into dummy/indicator variables ####                                                   ####
+######## Analyse dummy vars                                                ####
 ###############################################################################
 
-set.seed(333)
+variablesFactor <- c("FireplaceQu", "ExterCond")
 f <- paste('~', paste(variablesFactor, collapse = ' + '))
 encoder <- dummyVars(as.formula(f), full.dt, fullRank = T, drop2nd = T)
 full.dummyVars.dt <- as.data.table(predict(encoder, full.dt))
+full.dummyVars.dt <- cbind(full.dt[,dataPartition], full.dummyVars.dt)
+full.dummyVars.test.dt <- full.dummyVars.dt[V1 == "test",]
+
+desc <- describe(full.dummyVars.test.dt)
 
 
 
