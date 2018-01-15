@@ -1,11 +1,14 @@
 ---
-title: 'Regression techniques with R data.table and h2o machine learning'
+title: 'Exploratory analyis and machine learning model for predicting housing prices with R (data.table and h2o.ai)'
 date: "`r format(Sys.Date())`"
 author: "Bart Boerman"
 output:
   html_document:
     theme: lumen
     toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: true
     number_sections: true
     font-family: Open Sans, sans-serif
     font-import: https://fonts.googleapis.com/css?family=Open+Sans
@@ -74,29 +77,21 @@ In addition I want to gain and share some basic knowledge of
 
 ## Required libraries
 
-- **knitr**, used to create this document 
-- **data.table**, fast data wrangling with R
-- **h2o**, machine learning algorithmes and more from h2o.ai
-- **psych**, descriptive analytics, skewness and kurtosis
-- **caret**, (near) zero variance
 ```{r setup, message=FALSE, warning=FALSE, paged.print=FALSE}
-###################################################################
-#### Dependencies                                              ####
-###################################################################
-require(knitr)      ## a general-purpose programming engine
-knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
-require(DT)         ##  display data in html tables
+require(knitr)      ## dynamic report generation in R
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE) ## some defaults for this report
+require(DT)         ## display data in html tables
+require(ggplot2)    ## plotting 
+require(gridExtra)  ## Arrange visualizations using grid 
 require(data.table) ## fast data wrangling and analysis
 require(psych)      ## descriptive statistics, skewness and kurtosis
-require(caret)      ## (near) zero variance
+require(caret)      ## (near) zero variance, dummy variables
+require(h2o)        ## machine learning algorithmes and more from h2o.ai 
 ```
 
 # Get data into R
 
 ```{r}
-###################################################################
-#### Get data                                                  ####
-###################################################################
 train.dt <- fread(input = "train.csv", 
                   sep = ",", 
                   nrows = -1,
@@ -123,23 +118,14 @@ test.dt <- fread(input = "test.csv",
 train.dt[, dataPartition:="train"]
 test.dt[, SalePrice:=as.integer(NA)] 
 test.dt[, dataPartition:="test"]
-full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
+full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F) ## combine datasets for engineering
 ```
 
 # Data dictionary
 
-## Variables in raw data
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-## Data types
-variableTypes.df <- cbind(as.data.frame(names(full.dt)),as.data.frame(sapply(full.dt, class)))
-names(variableTypes.df) <- c("variable","type")
-datatable(variableTypes.df, rownames = F, 
-          caption = "List of variables with data type", 
-          options = list(pageLength = 8)) ## Interactive HTML table
-```
-
 ## Definitions
+
+The description of the data is available on [Kaggle](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/data). In the next block of code I've grouped the variables (data items) in three groups: square footage, values and factors. These groups will be used for engineering on the complete group rather than specifying one transformation at a time.
 
 ```{r}
 ## Numeric, square footage
@@ -185,10 +171,9 @@ variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, cl
 variablesFactor <- c(variablesFactor,
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
-                     "OverallCond",     ## Rates the overall condition of the house
-                     ## Import year and months as integers.
+                     "OverallCond",    ## Rates the overall condition of the house
                      #"MoSold",           
-                     "YrSold"        
+                     "YrSold"          ## Year sold as an factor. 
                      #"YearRemodAdd"   
                      #"YearBuilt",     
                      #"GarageYrBlt"    
@@ -197,21 +182,29 @@ variablesFactor <- c(variablesFactor,
 
 ## Data engineering
 
+Before further data exploration we need to engineer the data to the desired format. Doing so we make sure that  the data types are correct and hierarchical factors are sorted in the right order. The code blocks below performs the following tasks: rename variable names, change data type to numeric or factor and order hierarchical factors. 
+
+### Rename variables
+
 ```{r}
-###################################################################
-#### Data engineering                                          ####
-###################################################################
 ## In R first character can not be a number in variable names
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
+```
+
+### Change data type
+
+```{r}
 ## Set columns to numeric
 changeColType <- c(variablesSquareFootage, variablesCounts, variablesValues)
 full.dt[,(changeColType):= lapply(.SD, as.numeric), .SDcols = changeColType]
 ## Set columns to factor
 changeColType <- variablesFactor
 full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
-###################################################################
-#### Ordered factors                                           ####
-###################################################################
+```
+
+### Order hierarchical factors
+
+```{r}
 ## OverallQual, rates the overall material and finish of the house
 full.dt[,OverallQual:=ordered(OverallQual, levels = c(1:10))]
 ## OverallCond, rates the overall condition of the house
@@ -236,50 +229,63 @@ full.dt[,BsmtFinType1:=ordered(BsmtFinType1, levels = c("None","Unf","LwQ","Rec"
 full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## Electrical
 full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA","SBrkr"))]
-## Did not (yet) convert all possible factors to hierarchical.
+## Fence
+full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))]
+## PoolQC
+full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Fa","Gd","Ex"))]
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
 ```
 
 # Descriptive statistics
 
-## statisticts
+Descriptive statistics describe quantitatively the basic features of the data. These statistics will give us a head start by providing information about for example skewness, outliers (range) missing data points and (near) zero variance. 
 
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-###################################################################
-#### Descriptive statistics                                    ####
-###################################################################
-## statisticts
-descStats.df <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
+## Table with basic statistics
+
+The table below is calculated with the psych package.
+
+```{r}
+descStats.df <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) 
 datatable(round(descStats.df,2), rownames = T,
           caption = "Descriptive statistics", 
           options = list(pageLength = 8)) ## Interactive HTML table
-## na values
+```
+
+## Table with counts on missing values
+
+The table below provides counts on unknown (a.k.a. missing) values per variable. Please not that missing values are often legitimate. For example when a dwelling does not have a garage no value is provided in the corresponding variables. We will impute them with “None” or a zero further down this analysis.
+
+```{r}
 countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
 countIsNA.df <- data.frame(variableName = row.names(countIsNA.df), countIsNA.df,row.names = NULL)
 countIsNA.df <- countIsNA.df[countIsNA >0,]
 datatable(countIsNA.df, rownames = T, 
           caption = "Variables with missing values", 
-          options = list(pageLength = 8)) ## Interactive HTML table
-## zero variance
+          options = list(pageLength = 8))
+```
+
+## Table about variables with (near) zero variance
+
+Variables with zero variance are mostly constant across the data set, hence provide little information.
+
+```{r}
 zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
                                         foreach = T, allowParallel = T)
-
 datatable(round(subset(zeroVarianceVariables.df, nzv == TRUE, 
                        select =     c("freqRatio","percentUnique")),2), 
           rownames = T,
           caption = "Variables with (near) zero variance", 
-          options = list(pageLength = 8)) ## Interactive HTML table
+          options = list(pageLength = 8))
 ```
 
 # Data Cleansing
 
 ## Impute missing values
 
+The code below imputes the missing values in the data based on the characteristics of the variable or functionally related variables.  The provided data description tells us when missing values are not missing at random. 
+
 ```{r}
-###################################################################
-#### Impute missing values                                     ####
-###################################################################
 ## Kitchen
 full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
 ## Garage
@@ -328,13 +334,66 @@ full.dt[is.na(SaleType), SaleType := "WD"]
 full.dt[is.na(Functional), Functional := "Typ"]
 ## MiscFeature
 full.dt[is.na(MiscFeature), MiscFeature := "None"]
+## Alley
+full.dt[is.na(Alley), Alley := "None"]
+## Utilities
+full.dt[is.na(Utilities), Utilities := "AllPub"]
+## PoolQC
+full.dt[is.na(PoolQC), PoolQC := "None"]
+## Fence
+full.dt[is.na(Fence), Fence := "None"]
 ```
 
 ## Other operations
 
+By looking at the data I noticed a typo in GarageYrBlt. The predictive algorithm was kind enough to tell there was a level in the test data which was unseen during training. 
+
 ```{r}
-## Typo in GarageYrBlt
-full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007]
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
+full.dt[MSSubClass  == 150, MSSubClass:= "160"] ## 150 not in training set
 ```
 
+# Visualizations
+
+## Scatterplot saleprice per GrLivArea
+
+```{r}
+p5 <-ggplot(train.dt, aes(GrLivArea,SalePrice)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        geom_smooth(method=lm,     ## Add linear regression line 
+                    se=FALSE) +    ## Don't add shaded confidence region
+        theme(text = element_text(size=9)) 
+print(p5)
+```
+
+## Scatterplot LotArea vs GrLivArea
+
+```{r}
+p9 <-ggplot(train.dt, aes(GrLivArea,LotArea)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        geom_smooth(method=lm,     ## Add linear regression line 
+                    se=FALSE) +    ## Don't add shaded confidence region
+        theme(text = element_text(size=9)) 
+print(p9)
+```
+
+
+## Boxplot saleprice per neighborhood 
+
+```{r}
+p3a <-ggplot(train.dt, aes(as.factor(Neighborhood),SalePrice)) +
+        geom_boxplot(varwidth = TRUE, fill = "white", colour = "#3366FF", outlier.colour = "red", outlier.shape = 1) +
+        theme(text = element_text(size=9)) +   
+        coord_flip()
+print(p3a)
+```
+
+## Scatterplot saleprice per OverallQual
+
+```{r}
+p4 <-ggplot(train.dt, aes(OverallQual,SalePrice)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        theme(text = element_text(size=9)) 
+print(p4)
+```
 
