@@ -1,3 +1,4 @@
+require(caret)
 ###############################################################################
 #### One hot encoding of factor variables with dummyVars from caret        ####                                                   ####
 ###############################################################################
@@ -14,7 +15,7 @@ full.dummyVars.dt <- as.data.table(predict(encoder, full.dt))
 full.dummyVars.dt <- cbind(full.dt[,dataPartition], full.dummyVars.dt)
 test.dummyVars.dt <- full.dummyVars.dt[V1 == "test",]
 ## levels not available in test data set have range zero
-dummyVars.range.max <- sapply(full.dummyVars.test.dt[,!c("V1")], 
+dummyVars.range.max <- sapply(test.dummyVars.dt[,!c("V1")], 
                               function(x) {range(x, na.rm = T, finite = F)})[2,]
 dummyVars.df <- data.frame(dummyVars.range.max)
 dummyVars.df <- data.frame(variableName = row.names(dummyVars.df), dummyVars.df,row.names = NULL)
@@ -24,7 +25,7 @@ missingLevels <- as.character(dummyVars.df$variableName)
 train.dummyVars.missing.dt <- full.dummyVars.dt[V1 == "train", c(missingLevels), with=FALSE]
 train.dummyVars.missing.sum <- sapply(train.dummyVars.missing.dt, 
                                       function(x) {sum(x, na.rm = T)})
-print(train.dummyVars.sum)
+print(train.dummyVars.missing.sum)
 ###############################################################################
 ##### Solution for missing levels in test data                             ####
 ###############################################################################
@@ -76,4 +77,10 @@ full.dummyVars.dt <- full.dummyVars.dt[,!c(missingLevels), with=FALSE] ## gives 
 ## Combine with full data sets
 full.dt <- cbind(full.dt,full.dummyVars.dt)
 
+###############################################################################
+##### Remove original factors from data                                    ####
+###############################################################################
+
+
+full.dt <- full.dt[,!c(variablesFactor), with=FALSE]
 
