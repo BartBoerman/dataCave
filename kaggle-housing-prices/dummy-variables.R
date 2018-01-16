@@ -54,6 +54,14 @@ full.dt[, ':=' (hasRoofMatlWoodCly = ifelse(RoofMatl %in% c("WdShake","WdShngl",
 )]
 ## removed dropped factors from list
 variablesFactor <- setdiff(c(variablesFactor),c("Condition1","Condition2","RoofMatl"))
+missingLevels   <- setdiff(c(missingLevels)  ,c("UtilitiesNoSeWa"
+                                                ,"Condition2RRAe"
+                                                ,"Condition2RRAn"
+                                                ,"Condition2RRNn"
+                                                ,"HouseStyle2.5Fin"
+                                                ,"RoofMatlMembran"
+                                                ,"RoofMatlMetal"
+                                                ,"RoofMatlRoll"))
 ###############################################################################
 ##### Apply                                                                ####
 ###############################################################################
