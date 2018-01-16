@@ -28,5 +28,5 @@ full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA
 ## Fence
 full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))]
 ## PoolQC
-full.dt[,FireplaceQu:=ordered(FireplaceQu, levels = c("None","Fa","Gd","Ex"))]
+full.dt[,PoolQC:=ordered(PoolQC, levels = c("None","Fa","Gd","Ex"))]
 ## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
