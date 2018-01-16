@@ -52,5 +52,20 @@ full.dt[, ':=' (hasRoofMatlWoodCly = ifelse(RoofMatl %in% c("WdShake","WdShngl",
                 hasRoofCompShg = ifelse(RoofMatl == "CompShg",1,0), 
                 RoofMatl = NULL  ## highly correlated
 )]
+## removed dropped factors from list
+variablesFactor <- setdiff(c(variablesFactor),c("Condition1","Condition2","RoofMatl"))
+###############################################################################
+##### Apply                                                                ####
+###############################################################################
+## formulala for one hot encoding
+f <- paste('~', paste(variablesFactor, collapse = ' + '))
+## one hot encode train data with dummyVars from caret package
+encoder <- dummyVars(as.formula(f), train.dt, fullRank = T, drop2nd = T)
+## apply encoding on full data set
+full.dummyVars.dt <- as.data.table(predict(encoder, full.dt))
 ## Could have done a more thorough job, other missing levels will just be removed
-full.dummyVars.dt <- full.dummyVars.dt[,!c(missingLevels,"dataPartition"), with=FALSE]
+full.dummyVars.dt <- full.dummyVars.dt[,!c(missingLevels), with=FALSE] ## gives error because we solved some
+## Combine with full data sets
+full.dt <- cbind(full.dt,full.dummyVars.dt)
+
+
