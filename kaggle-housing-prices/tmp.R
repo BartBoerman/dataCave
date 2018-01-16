@@ -197,14 +197,32 @@ tmp.dt <- tmp.dt[, c("Id","MoSold","YrSold","Neighborhood","MSZoning","OverallQu
 ######## Analyse dummy vars                                                ####
 ###############################################################################
 
-variablesFactor <- c("FireplaceQu", "ExterCond")
+## formulala for one hot encoding
 f <- paste('~', paste(variablesFactor, collapse = ' + '))
-encoder <- dummyVars(as.formula(f), full.dt, fullRank = T, drop2nd = T)
+## one hot encode train data with dummyVars from caret package
+encoder <- dummyVars(as.formula(f), train.dt, fullRank = T, drop2nd = T)
+## apply encoding on full data set
 full.dummyVars.dt <- as.data.table(predict(encoder, full.dt))
 full.dummyVars.dt <- cbind(full.dt[,dataPartition], full.dummyVars.dt)
-full.dummyVars.test.dt <- full.dummyVars.dt[V1 == "test",]
+## filter out test data set
+test.dummyVars.dt <- full.dummyVars.dt[V1 == "test",]
+## levels not available in test data set have range zero
+dummyVars.range.max <- sapply(full.dummyVars.test.dt[,!c("V1")], 
+                                function(x) {range(x, na.rm = T, finite = F)})[2,]
+dummyVars.df <- data.frame(dummyVars.range.max)
+dummyVars.df <- data.frame(variableName = row.names(dummyVars.df), dummyVars.df,row.names = NULL)
+dummyVars.df <- dummyVars.df[dummyVars.range.max == 0,]
+## Solution
+### remove corresponding dummy columns
+### bin levels with other levels that exists in training data
+missingLevels <- as.character(dummyVars.df$variableName)  
+## what is the distribution of these levels in the training data?
+train.dummyVars.dt <- full.dummyVars.dt[V1 == "train", c(missingLevels), with=FALSE]
 
-desc <- describe(full.dummyVars.test.dt)
+
+
+
+
 
 
 
