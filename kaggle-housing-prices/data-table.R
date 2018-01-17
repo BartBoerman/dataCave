@@ -194,39 +194,3 @@ full.dt[is.na(Utilities), Utilities := "AllPub"]
 full.dt[is.na(PoolQC), PoolQC := "None"]
 ## Fence
 full.dt[is.na(Fence), Fence := "None"]
-###################################################################
-#### Feature engineering                                       ####
-###################################################################
-full.dt[, totalSF:= (TotalBsmtSF + FirstFlrSF + SecondFlrSF)]
-
-# full.dt[, ':=' (totalSF = TotalBsmtSF + FirstFlrSF + SecondFlrSF,
-#                hasRegLotShape = ifelse(LotShape == "Reg",1,0),
-#                hasLvlLandContour = ifelse(LandContour == "Lvl",1,0),
-#                hasGtlLandSlope = ifelse(LandSlope == "Gtl",1,0),
-#                hasElectricalSBrkr = ifelse(Electrical == "SBrkr",1,0),
-#                hasPavedDrive = ifelse(PavedDrive == "Y",1,0),
-#                hasShed = ifelse(MiscFeature == "Shed",1,0),
-#                hasOpenPorch = ifelse(OpenPorchSF > 0,1,0),
-#                hasEnclosedPorch = ifelse(EnclosedPorch > 0,1,0),
-#                hasThreeSsnPorch = ifelse(ThreeSsnPorch > 0,1,0),
-#                hasScreenPorch = ifelse(ScreenPorch > 0,1,0),
-#                hasPorch = ifelse(ScreenPorch > 0 | ThreeSsnPorch > 0 | EnclosedPorch > 0 | OpenPorchSF > 0, 1, 0),
-#                hasSecondFloor = ifelse(SecondFlrSF > 0,1,0),
-#                hasHasMasVnr = ifelse(MasVnrArea > 0,1,0),
-#                hasHasWoodDeck = ifelse(WoodDeckSF > 0,1,0),
-#                hasBadHeating = ifelse(HeatingQC %in% c("Fa","Po"),1,0),
-#                isNewerDwelling = ifelse(MSSubClass %in% c(20,60,120,160),1,0),
-#                isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0),
-#                isRemodeledRecent = ifelse(YearRemodAdd == YrSold, 1, 0),
-#                isNew = ifelse(YearBuilt == YrSold, 1, 0),
-#                ageInYears = 2010 - YearBuilt,
-#                yearsSinceSold = 2010 - YrSold
-# )]
-
-
-
-
-
-
-
-
