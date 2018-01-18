@@ -11,8 +11,7 @@ require(caret)      # (near) zero variance and dummyVars
 h2o.connect(
   ip = "192.168.1.219",
   strict_version_check = FALSE, ## watch out here.
-
-    port = 54321
+  port = 54321
 )
 ###################################################################
 #### Upload data to h2o                                        ####
@@ -79,7 +78,7 @@ finalPredictions <- h2o.predict(
   object = gbm
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
-finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+#finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.gbm.csv", force = T)
 ###################################################################
@@ -129,17 +128,18 @@ xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for tra
                        validation_frame = validate.hex,     ## the H2O frame for validation (not required)
                        x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
                        y=response,                          ## what we are predicting,alternativaly, e.g. 81
-                       distribution = "AUTO",
+                       distribution = "gaussian",
+                       #categorical_encoding = "EnumLimited",
                        ntrees = 50,
                        max_depth = 3,                       ## Higher values will make the model more complex and can lead to overfitting.
                        min_rows = 8,
-                       learn_rate = 0.01,
-                       #sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
+                       #learn_rate = 0.01,
+                       sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
                        col_sample_rate = 1.0,
-                       max_abs_leafnode_pred = 0.2,          ## Reduce overfitting by limiting the absolute value of a leafe node prediction
-                       min_split_improvement = 1e-3,         ## The value of this option specifies the minimum relative improvement in squared error reduction in order for a split to happen. When properly tuned, this option can help reduce overfitting. Optimal values would be in the 1e-10…1e-3 range.  
-                       nfolds =5,
-                       fold_assignment = "Modulo",
+                       #max_abs_leafnode_pred = 0.2,          ## Reduce overfitting by limiting the absolute value of a leafe node prediction
+                       #min_split_improvement = 1e-3,         ## The value of this option specifies the minimum relative improvement in squared error reduction in order for a split to happen. When properly tuned, this option can help reduce overfitting. Optimal values would be in the 1e-10…1e-3 range.  
+                       nfolds =3,
+                       #fold_assignment = "Modulo",
                        #keep_cross_validation_predictions = TRUE,
                        seed = 333)
 ## Extract specific metric
@@ -153,7 +153,7 @@ finalPredictions <- h2o.predict(
   object = xgb
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
-finalPredictions$SalePrice <- finalPredictions$SalePrice
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.xgb.csv", force = T)
 ###################################################################
