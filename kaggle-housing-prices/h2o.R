@@ -145,6 +145,16 @@ h2o.rmsle(xgb, train = T)
 h2o.rmsle(xgb, valid = T)
 h2o.rmsle(h2o.performance(xgb, xval = T))
 ###################################################################
+#### Predict xgb                                               ####
+###################################################################
+finalPredictions <- h2o.predict(
+  object = xgb
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "submission.h2o.xgb.csv", force = T)
+###################################################################
 #### Automated machine learning                                ####
 ###################################################################
 autoMl <- h2o.automl(
