@@ -127,16 +127,16 @@ h2o.exportFile(submission, path = "submission.h2o.glm.csv", force = T)
 ###################################################################
 xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for training
                        validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-                        x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+                       x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
                        y=response,                          ## what we are predicting,alternativaly, e.g. 81
                        distribution = "AUTO",
-                       ntrees = 50,
-                       max_depth = 8,
-                       min_rows = 1,
-                       learn_rate = 0.1,
+                       ntrees = 10,
+                       max_depth = 6,
+                       min_rows = 8,
+                       learn_rate = 0.2,
                        sample_rate = 0.7,
                        col_sample_rate = 0.9,
-                       nfolds =3,
+                       nfolds =5,
                        fold_assignment = "Modulo",
                        keep_cross_validation_predictions = TRUE,
                        seed = 333)
