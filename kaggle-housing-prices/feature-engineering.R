@@ -80,7 +80,7 @@ variablesDrop <- c("BsmtCond",
                 "HouseStyle",
                 "LandContour",
                 "LandSlope",
-                "LotShape"
+                "LotShape",
                 "LowQualFinSF",
                 "MasVnrArea",
                 "MiscFeature",
@@ -107,7 +107,5 @@ variablesValues <- setdiff(variablesValues, variablesDrop)
 variablesFactor <- setdiff(variablesFactor, variablesDrop)
 response <- "SalePrice"  
 features <- setdiff(names(full.dt), c(response, "Id","dataPartition")) 
-
-
 
 

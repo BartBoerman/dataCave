@@ -123,6 +123,28 @@ finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice)
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "submission.h2o.glm.csv", force = T)
 ###################################################################
+#### XGBoost                                                   ####
+###################################################################
+xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for training
+                       validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+                        x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+                       y=response,                          ## what we are predicting,alternativaly, e.g. 81
+                       distribution = "AUTO",
+                       ntrees = 50,
+                       max_depth = 8,
+                       min_rows = 1,
+                       learn_rate = 0.1,
+                       sample_rate = 0.7,
+                       col_sample_rate = 0.9,
+                       nfolds =3,
+                       fold_assignment = "Modulo",
+                       keep_cross_validation_predictions = TRUE,
+                       seed = 333)
+## Extract specific metric
+h2o.rmsle(xgb, train = T)
+h2o.rmsle(xgb, valid = T)
+h2o.rmsle(h2o.performance(xgb, xval = T))
+###################################################################
 #### Automated machine learning                                ####
 ###################################################################
 autoMl <- h2o.automl(
