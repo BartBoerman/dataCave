@@ -103,7 +103,7 @@ variablesDrop <- c("BsmtCond",
                 "YearRemodAdd",
                 "YrSold")
 variablesSquareFootage <- setdiff(variablesSquareFootage, variablesDrop)
-variablesValues <- setdiff(variablesSquareFootage, variablesValues)
+variablesValues <- setdiff(variablesValues, variablesDrop)
 response <- "SalePrice"  
 features <- setdiff(names(full.dt), c(response, "Id","dataPartition")) 
 
