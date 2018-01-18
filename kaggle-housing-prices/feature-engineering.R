@@ -5,15 +5,8 @@
 ###################################################################
 #### Feature engineering                                       ####
 ###################################################################
-neighborhood.bin <- c('MeadowV' = 0, 'IDOTRR' = 1, 'Sawyer' = 1, 'BrDale' = 1, 'OldTown'= 1,
-                      'Edwards' = 1, 'BrkSide' = 1, 'Blueste' = 1, 'SWISU' = 2, 'NAmes' = 2,
-                      'NPkVill' = 2, 'Mitchel' = 2,'SawyerW' = 2, 'Gilbert' = 2, 'NWAmes'=2,
-                      'Blmngtn' = 2, 'CollgCr' = 2, 'ClearCr' = 3,'Crawfor' =3, 'Veenker'=3,
-                      'Somerst' = 3, 'Timber' = 3, 'StoneBr' = 4, 'NoRidge'= 4,'NridgHt' =4)
 overallCond.bin <- c('1' = 1, '2'= 1, '3' = 1, '4' = 2,'5' = 2, '6' = 2, '7' = 3, '8' = 3,
              '      9' = 3)
-overallCond.bin <- c('1' = 1, '2'= 1, '3' = 1, '4' = 2,'5' = 2, '6' = 2, '7' = 3, '8' = 3,
-                     '      9' = 3)
 houseStyle.bin <- c("1Story" = "1Story", 
                     "1.5Fin" = "1.5Story", 
                     "1.5Unf" = "1.5Story",
@@ -23,10 +16,11 @@ houseStyle.bin <- c("1Story" = "1Story",
                     "SFoyer" = "SFoyer",
                     "SLvl" = "SLvl") 
 full.dt[, ':=' (
-               BinNeighborhood = as.factor(neighborhood.bin[Neighborhood]), 
-               BinOverallCond = as.integer(overallCond.bin[OverallCond]), 
+               # BinOverallCond = as.integer(overallCond.bin[OverallCond]), 
                BinHouseStyle = as.factor(houseStyle.bin[HouseStyle]),
                hasShed = ifelse(MiscFeature == "Shed",1,0),
+               hasBsmtUnf = ifelse(BsmtUnfSF > 0,1,0),
+               hasLowQualFin = ifelse(LowQualFinSF > 0,1,0),
                hasOpenPorch = ifelse(OpenPorchSF > 0,1,0),
                hasEnclosedPorch = ifelse(EnclosedPorch > 0,1,0),
                hasThreeSsnPorch = ifelse(ThreeSsnPorch > 0,1,0),
@@ -69,6 +63,9 @@ variablesDrop <- c("BsmtCond",
                 "BsmtFullBath",
                 "BsmtHalfBath",
                 "BsmtQual",
+                "BsmtUnfSF",
+                "BsmtFinSF1",
+                "BsmtFinSF2",
                 "Condition1", 
                 "Condition2",  
                 "Electrical",
@@ -83,15 +80,17 @@ variablesDrop <- c("BsmtCond",
                 "HouseStyle",
                 "LandContour",
                 "LandSlope",
+                "LowQualFinSF",
                 "MasVnrArea",
                 "MiscFeature",
                 "MoSold",
                 "MSSubClass",
-                "Neighborhood",
+               # "Neighborhood",
                 "OpenPorchSF", 
                 "OverallCond",
                 "OverallQual",
                 "PavedDrive",
+                "PoolArea",
                 "RoofMatl", 
                 "SaleCondition",
                 "ScreenPorch",
@@ -106,5 +105,7 @@ variablesSquareFootage <- setdiff(variablesSquareFootage, variablesDrop)
 variablesValues <- setdiff(variablesValues, variablesDrop)
 response <- "SalePrice"  
 features <- setdiff(names(full.dt), c(response, "Id","dataPartition")) 
+
+
 
 

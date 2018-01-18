@@ -125,7 +125,7 @@ full.dt[,(changeColType):= lapply(.SD, as.factor), .SDcols = changeColType]
 ###################################################################
 ## statisticts
 descStats.df <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) ## from psych package 
-print(descStats.df)
+#print(descStats.df)
 ## na values
 countIsNA <- sapply(full.dt,function(x)sum(is.na(x)))
 countIsNA.df <- data.frame(countIsNA)
