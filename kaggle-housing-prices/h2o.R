@@ -186,12 +186,12 @@ autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_220836")
 autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_220836_model_0")
 autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_220836_model_15")   
 finalPredictions <- h2o.predict(
-  object =  autoMl@leader
+  object =  autoGLM #autoMl@leader
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autML.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autGLM.csv", force = T)
 
 
 
