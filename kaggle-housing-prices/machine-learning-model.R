@@ -9,7 +9,8 @@
 require(h2o)        # machine learning algorithmes
 require(caret)      # (near) zero variance and dummyVars
 h2o.connect(
-  ip = "192.168.1.215",
+  ip = "192.168.1.219",
+  strict_version_check = FALSE, ## watch out here.
   port = 54321
 ) 
 ###################################################################
@@ -77,7 +78,7 @@ gbm <- h2o.gbm(
       x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
       y=response,                          ## what we are predicting,alternativaly, e.g. 81
       nfolds = 5,
-      ntrees = 1000, # first do 1000, then plot, then adjust to 40
+      ntrees = 25, # first do 1000, then plot, then adjust to 40
       learn_rate=0.1,
       #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
       sample_rate = 0.8,                   ## sample 80% of rows per tree
