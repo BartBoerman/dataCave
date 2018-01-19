@@ -39,8 +39,9 @@ gbm <- h2o.gbm(
       x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
       y=response,                          ## what we are predicting,alternativaly, e.g. 81
       nfolds = 5,
-      ntrees = 1000, # first do 1000, then plot, then adjust to 40
-      learn_rate=0.1,
+      ntrees = 511, # first do 1000, then plot, then adjust to 40
+      max_depth = 13,
+      #learn_rate=0.1,
       #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
       #sample_rate = 0.8,                   ## sample 80% of rows per tree
       #col_sample_rate = 0.8,               ## sample 80% of columns per split
@@ -78,9 +79,9 @@ finalPredictions <- h2o.predict(
   object = gbm
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
-#finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.gbm.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.gbm.csv", force = T)
 ###################################################################
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
@@ -130,10 +131,10 @@ xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for tra
                        y=response,                          ## what we are predicting,alternativaly, e.g. 81
                        distribution = "gaussian",
                        #categorical_encoding = "EnumLimited",
-                       ntrees = 50,
-                       max_depth = 3,                       ## Higher values will make the model more complex and can lead to overfitting.
-                       min_rows = 8,
-                       #learn_rate = 0.01,
+                       ntrees = 350,
+                       max_depth = 1,                       ## Higher values will make the model more complex and can lead to overfitting.
+                       min_rows = 4,
+                       learn_rate = 0.03,
                        sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
                        col_sample_rate = 1.0,
                        #max_abs_leafnode_pred = 0.2,          ## Reduce overfitting by limiting the absolute value of a leafe node prediction
@@ -155,7 +156,7 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.xgb.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.xgb.csv", force = T)
 ###################################################################
 #### Automated machine learning                                ####
 ###################################################################
@@ -167,7 +168,7 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 3600,
+  max_runtime_secs = 300,
   stopping_rounds = 2,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
@@ -179,16 +180,16 @@ h2o.rmsle(autoMl@leader, valid = T)
 ###################################################################
 #### Predict and submit                                        ####
 ###################################################################
-autoStack <- h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180112_120335")
-autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180112_120335_model_0")
-autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180112_125300_model_53")   
+autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_105512")
+autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_105512_model_0")
+autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_105512_model_8")   
 finalPredictions <- h2o.predict(
-  object =  autoGBM ##autoMl@leader
+  object =  autoMl@leader
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.autGBM.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autML.csv", force = T)
 
 
 

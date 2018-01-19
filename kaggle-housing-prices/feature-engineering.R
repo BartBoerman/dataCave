@@ -106,6 +106,6 @@ variablesSquareFootage <- setdiff(variablesSquareFootage, variablesDrop)
 variablesValues <- setdiff(variablesValues, variablesDrop)
 variablesFactor <- setdiff(variablesFactor, variablesDrop)
 response <- "SalePrice"  
-features <- setdiff(names(full.dt), c(response, "Id","dataPartition")) 
+features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartition")) 
 
 
