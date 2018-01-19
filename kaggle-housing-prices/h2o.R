@@ -39,15 +39,17 @@ gbm <- h2o.gbm(
       x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
       y=response,                          ## what we are predicting,alternativaly, e.g. 81
       nfolds = 5,
-      ntrees = 511, # first do 1000, then plot, then adjust to 40
-      max_depth = 13,
-      #learn_rate=0.1,
+      ntrees = 100, # first do 1000, then plot, then adjust to 40
+      max_depth = 3,
+      distribution = "AUTO",
+      min_rows = 4,
+      learn_rate=0.3,
+      min_split_improvement = 1e-3,
       #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
       #sample_rate = 0.8,                   ## sample 80% of rows per tree
       #col_sample_rate = 0.8,               ## sample 80% of columns per split
       ignore_const_cols = TRUE,
-      stopping_rounds = 5, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
-      score_tree_interval = 10,              ## score every 10 trees to make early stopping reproducible (it depends on the scoring interval)   
+      stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
       model_id = "gbm_housing_v1",         ## name the model in H2O
       seed = 333)                          ## Set the random seed for reproducability
 ## performance of the model
@@ -91,7 +93,7 @@ glm <- h2o.glm(
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             family = "gaussian",
-            ## standardize = TRUE,               ## Scaling already done.
+            standardize = TRUE,             
             missing_values_handling = "Skip",
             remove_collinear_columns = TRUE,
             nfolds = 3,
@@ -132,7 +134,7 @@ xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for tra
                        distribution = "gaussian",
                        #categorical_encoding = "EnumLimited",
                        ntrees = 350,
-                       max_depth = 1,                       ## Higher values will make the model more complex and can lead to overfitting.
+                       max_depth = 3,                       ## Higher values will make the model more complex and can lead to overfitting.
                        min_rows = 4,
                        learn_rate = 0.03,
                        sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
@@ -168,7 +170,7 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 300,
+  max_runtime_secs = 600,
   stopping_rounds = 2,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"

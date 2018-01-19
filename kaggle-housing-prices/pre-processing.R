@@ -8,9 +8,11 @@ require(caret)      # (near) zero variance and dummyVars
 #### remove unwanted variables
 full.dt[, (variablesDrop):=NULL]
 ##### remove outliers
-full.dt <- full.dt[!(Id %in% outliers.Id),]
+full.dt <- full.dt[!(Id %in% outliers.Id) & dataPartition == "train",]
 ##### ordinal factors
 ## convert ordinal factors to integers. h2o does not support ordered factors.
+changeColType <- variablesFactor
+full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 #### remove variables with zero variance
 #### skewed variables
 ## log transform skewed variables (including response variable)
@@ -35,4 +37,3 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 setkey(full.dt,"dataPartition") 
 train.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
-

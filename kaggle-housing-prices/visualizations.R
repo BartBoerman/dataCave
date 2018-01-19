@@ -60,6 +60,58 @@ p2 <-ggplot(full.dt, aes(x = MSSubClass)) +
           theme(text = element_text(size=9)) +
           coord_flip()
 ###################################################################
+#### median saleprice                                          ####
+###################################################################
+p2 <-ggplot(full.dt, aes(x = OverallQual, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = OverallCond, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = ExterQual, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = ExterCond, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = BsmtQual, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = BsmtCond, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x = countBathrooms, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x =  HouseStyle, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x =  hasUnfinishedLevel, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9)) 
+p2 <-ggplot(full.dt, aes(x =  GarageCars, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9))
+p2 <-ggplot(full.dt, aes(x =  FullBath, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9))
+p2 <-ggplot(full.dt, aes(x =  HalfBath+FullBath, y = SalePrice)) +
+          geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+          theme(text = element_text(size=9))
+
+p3a <-ggplot(train.dt, aes(as.factor(FullBath+HalfBath),SalePrice)) +
+          geom_boxplot(varwidth = TRUE, fill = "white", colour = "#3366FF", outlier.colour = "red", outlier.shape = 1) +
+          theme(text = element_text(size=9)) +   
+          coord_flip()
+
+p3a <-ggplot(train.dt, aes(as.factor(BsmtFullBath),SalePrice)) +
+          geom_boxplot(varwidth = TRUE, fill = "white", colour = "#3366FF", outlier.colour = "red", outlier.shape = 1) +
+          theme(text = element_text(size=9)) +   
+          coord_flip()
+
+
+
+###################################################################
 #### Other graphs                                              ####
 ###################################################################
 #### Boxplot saleprice per neighborhood 
@@ -88,6 +140,12 @@ p6 <-ggplot(train.dt, aes(LotArea,SalePrice)) +
         geom_smooth(method=lm,     ## Add linear regression line 
                     se=FALSE) +    ## Don't add shaded confidence region
         theme(text = element_text(size=9)) 
+#### Scatterplot saleprice per GarageArea
+p5 <-ggplot(train.dt, aes(GarageArea,SalePrice)) +
+  geom_point(shape=1) +      ## Use hollow circles
+  geom_smooth(method=lm,     ## Add linear regression line 
+              se=FALSE) +    ## Don't add shaded confidence region
+  theme(text = element_text(size=9)) 
 #### Scatterplot saleprice per FirstFlrSF
 p7 <-ggplot(train.dt, aes(X1stFlrSF,SalePrice)) +
         geom_point(shape=1) +      ## Use hollow circles
