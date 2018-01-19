@@ -8,7 +8,7 @@ require(caret)      # (near) zero variance and dummyVars
 #### remove unwanted variables
 full.dt[, (variablesDrop):=NULL]
 ##### remove outliers
-full.dt <- full.dt[!(Id %in% outliers.Id) & dataPartition == "train",]
+full.dt <- full.dt[!(Id %in% outliers.Id)]
 ##### ordinal factors
 ## convert ordinal factors to integers. h2o does not support ordered factors.
 changeColType <- variablesFactor
