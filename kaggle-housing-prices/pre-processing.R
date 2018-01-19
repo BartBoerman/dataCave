@@ -27,7 +27,7 @@ full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = 
 ###################################################################
 #### Select features                                           ####
 ###################################################################
-features <- setdiff(names(full.dt), c(response, "Id","SalePrice","dataPartition")) 
+features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartition")) 
 ###################################################################
 #### Split data                                                ####
 ###################################################################
