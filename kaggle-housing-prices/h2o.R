@@ -24,7 +24,7 @@ test.hex <- as.h2o(test.dt,"test.hex")
 ## split training data into training and validation data sets
 splits <- h2o.splitFrame(
   train.hex,           ##  splitting the H2O frame we read above
-  c(0.7),   
+  c(0.8),   
   seed=333)    ##  setting a seed will ensure reproducible results (not R's seed)
 
 train.hex <- h2o.assign(splits[[1]], "train.hex")   
@@ -123,7 +123,7 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "submission.h2o.glm.csv", force = T)
+h2o.exportFile(submission, path = "home/h2o/h2o/output/submission.h2o.glm.csv", force = T)
 ###################################################################
 #### XGBoost                                                   ####
 ###################################################################
