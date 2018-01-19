@@ -34,24 +34,24 @@ validate.hex <- h2o.assign(splits[[2]], "valid.hex")
 #### Gradient Boosting Machine (GBM)                           ####
 ###################################################################
 gbm <- h2o.gbm(
-      training_frame = train.hex,          ## the H2O frame for training
-      validation_frame = validate.hex,     ## the H2O frame for validation (not required)
-      x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-      y=response,                          ## what we are predicting,alternativaly, e.g. 81
-      nfolds = 5,
-      ntrees = 100, # first do 1000, then plot, then adjust to 40
-      max_depth = 3,
-      distribution = "AUTO",
-      min_rows = 4,
-      learn_rate=0.3,
-      min_split_improvement = 1e-3,
-      #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
-      #sample_rate = 0.8,                   ## sample 80% of rows per tree
-      #col_sample_rate = 0.8,               ## sample 80% of columns per split
-      ignore_const_cols = TRUE,
-      stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
-      model_id = "gbm_housing_v1",         ## name the model in H2O
-      seed = 333)                          ## Set the random seed for reproducability
+            training_frame = train.hex,          ## the H2O frame for training
+            validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+            x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+            y=response,                          ## what we are predicting,alternativaly, e.g. 81
+            nfolds = 5,
+            ntrees = 100, # first do 1000, then plot, then adjust to 40
+            max_depth = 3,
+            distribution = "AUTO",
+            min_rows = 4,
+            learn_rate=0.3,
+            min_split_improvement = 1e-3,
+            #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
+            #sample_rate = 0.8,                   ## sample 80% of rows per tree
+            #col_sample_rate = 0.8,               ## sample 80% of columns per split
+            ignore_const_cols = TRUE,
+            stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+            model_id = "gbm_housing_v1",         ## name the model in H2O
+            seed = 333)                          ## Set the random seed for reproducability
 ## performance of the model
 h2o.performance(gbm, newdata = train.hex)
 h2o.performance(gbm, newdata = validate.hex)
@@ -123,7 +123,7 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "home/h2o/h2o/output/submission.h2o.glm.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.glm.csv", force = T)
 ###################################################################
 #### XGBoost                                                   ####
 ###################################################################
@@ -133,7 +133,7 @@ xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for tra
                        y=response,                          ## what we are predicting,alternativaly, e.g. 81
                        distribution = "gaussian",
                        #categorical_encoding = "EnumLimited",
-                       ntrees = 350,
+                       ntrees = 300,
                        max_depth = 3,                       ## Higher values will make the model more complex and can lead to overfitting.
                        min_rows = 4,
                        learn_rate = 0.03,
@@ -182,9 +182,9 @@ h2o.rmsle(autoMl@leader, valid = T)
 ###################################################################
 #### Predict and submit                                        ####
 ###################################################################
-autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_105512")
-autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_105512_model_0")
-autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_105512_model_8")   
+autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_220836")
+autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_220836_model_0")
+autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_220836_model_15")   
 finalPredictions <- h2o.predict(
   object =  autoMl@leader
   ,newdata = test.hex)

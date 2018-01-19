@@ -29,4 +29,8 @@ full.dt[,Electrical:=ordered(Electrical, levels = c("FuseP","Mix","FuseF","FuseA
 full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))]
 ## PoolQC
 full.dt[,PoolQC:=ordered(PoolQC, levels = c("None","Fa","Gd","Ex"))]
-## Ordered factors are not supported by h2o, Let's convert them into integers during pre-processing. Lowest level will be 1 etc.
+## all ordinal factors
+ordinalFactors <- c("OverallQual","OverallCond","KitchenQual","GarageFinish",
+                    "ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure",
+                    "BsmtFinType1","FireplaceQu","Electrical","Fence","PoolQC")
+variablesFactor <- setdiff(variablesFactor, ordinalFactors)

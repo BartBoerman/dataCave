@@ -7,11 +7,12 @@ require(caret)      # (near) zero variance and dummyVars
 ###################################################################
 #### remove unwanted variables
 full.dt[, (variablesDrop):=NULL]
+full.dt[, (variablesFactor):=NULL]
 ##### remove outliers
 full.dt <- full.dt[!(Id %in% outliers.Id)]
 ##### ordinal factors
 ## convert ordinal factors to integers. h2o does not support ordered factors.
-changeColType <- variablesFactor
+changeColType <- ordinalFactors
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 #### remove variables with zero variance
 #### skewed variables
