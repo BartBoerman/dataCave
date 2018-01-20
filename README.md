@@ -1,4 +1,4 @@
-# Kaggle competition: House Prices - advanced regression techniques**
+# Kaggle competition: House Prices - advanced regression techniques
 - **data-table.R**, data wrangling, basic statistics, impute missing values and feature engineering
 - **visualizations.R**, plotting for visual analysis
 - **outliers.R**, detect outliers and remove or impute them
