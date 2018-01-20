@@ -190,4 +190,4 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autML.csv", force = T)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.autML.csv", force = T)
