@@ -7,4 +7,4 @@
 - **tmp.R**, try outs. Nothing fancy and might be empty.
 
 # References and acknowledgements**
-- see links in sidebar on the wiki page
+- see links in sidebar on the [wiki page](https://github.com/BartBoerman/dataCave/wiki)
