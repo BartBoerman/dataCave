@@ -32,7 +32,7 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 
 #Warning message:
 #  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
-#  Dropping bad and constant columns: [BsmtFinSF2, WoodDeckSF, BsmtFinSF1, LowQualFinSF, PoolArea, MasVnrArea, BsmtUnfSF].
+#  Dropping bad and constant columns: [BsmtFinSF2, WoodDeckSF, Condition2PosN, Exterior1stBrkComm, BsmtFinSF1, LowQualFinSF, PoolArea, MasVnrArea, Condition2PosA, BsmtUnfSF].
 ###################################################################
 #### Feature engineering full                                  ####
 ###################################################################
