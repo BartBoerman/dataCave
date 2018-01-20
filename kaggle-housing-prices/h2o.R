@@ -7,7 +7,6 @@
 #### Dependencies                                              ####
 ###################################################################
 require(h2o)        # machine learning algorithmes
-require(caret)      # (near) zero variance and dummyVars
 h2o.connect(
   ip = "192.168.1.219",
   strict_version_check = FALSE, ## watch out here.
@@ -186,21 +185,9 @@ autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_220836")
 autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_220836_model_0")
 autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_220836_model_15")   
 finalPredictions <- h2o.predict(
-  object =  autoGLM #autoMl@leader
+  object =  autoMl@leader
   ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autGLM.csv", force = T)
-
-
-
-# remove data.frames before uploading solves data type error?
-# Warning messages:
-#   1: In doTryCatch(return(expr), name, parentenv, handler) :
-#   Test/Validation dataset column 'YearBuilt' has levels not trained on: [1879, 1895, 1896, 1901, 1902, 1907]
-# 2: In doTryCatch(return(expr), name, parentenv, handler) :
-#   Test/Validation dataset column 'GarageYrBlt' has levels not trained on: [1895, 1896, 1917, 1919, 1943, 2207]
-# 3: In doTryCatch(return(expr), name, parentenv, handler) :
-#   Test/Validation dataset column 'MSSubClass' has levels not trained on: [150]
-# 
+h2o.exportFile(submission, path = "/home/h2o/h2o/submission.h2o.autML.csv", force = T)

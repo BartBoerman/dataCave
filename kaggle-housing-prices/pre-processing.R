@@ -9,6 +9,7 @@ require(caret)      # (near) zero variance and dummyVars
 full.dt[, (variablesDrop):=NULL]
 full.dt[, (variablesFactor):=NULL]
 ##### remove outliers
+outliers.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200 | SalePrice > 650000,Id]
 full.dt <- full.dt[!(Id %in% outliers.Id)]
 ##### ordinal factors
 ## convert ordinal factors to integers. h2o does not support ordered factors.
