@@ -27,7 +27,7 @@ full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewed
 #### scale 
 ## scale (exluding response)
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
-full.dt <- full.dt[ , (variablesSquareFootage) := lapply(.SD, scale), .SDcols = variablesSquareFootage]
+full.dt <- full.dt[, (skewedVariables) := lapply(.SD, function(x) scale(x, center = T, scale = T)), .SDcols = skewedVariables]
 ###################################################################
 #### Select features                                           ####
 ###################################################################
