@@ -3,8 +3,6 @@
 ###################################################################
 ##http://www.listendata.com/2016/10/r-data-table.html
 ##http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/
-##http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
-##https://www.kaggle.com/litachil/try-the-xgboost 
 ###################################################################
 #### Dependencies                                              ####
 ###################################################################

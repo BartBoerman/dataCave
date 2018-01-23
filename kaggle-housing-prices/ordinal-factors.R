@@ -1,4 +1,8 @@
 ###################################################################
+#### References                                                ####
+###################################################################
+##http://www.cookbook-r.com/Manipulating_data/Changing_the_order_of_levels_of_a_factor/
+###################################################################
 #### Set order for ordinal factors                             ####
 ###################################################################
 ## OverallQual, rates the overall material and finish of the house
