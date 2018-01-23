@@ -20,15 +20,9 @@ h2o.rm("train.hex")
 train.hex <- as.h2o(train.dt,"train.hex")
 h2o.rm("test.hex")
 test.hex <- as.h2o(test.dt,"test.hex")
-## split training data into training and validation data sets
-splits <- h2o.splitFrame(
-  train.hex,           ##  splitting the H2O frame we read above
-  c(0.8),   
-  seed=333)    ##  setting a seed will ensure reproducible results (not R's seed)
+h2o.rm("valid.hex")
+validate.hex <- as.h2o(validate.dt,"valid.hex")
 
-train.hex <- h2o.assign(splits[[1]], "train.hex")   
-h2o.rm("validate.hex")
-validate.hex <- h2o.assign(splits[[2]], "valid.hex")  
 ###################################################################
 #### Gradient Boosting Machine (GBM)                           ####
 ###################################################################
@@ -92,15 +86,16 @@ glm <- h2o.glm(
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             family = "gaussian",
+            link = "identity",
             standardize = TRUE,             
-            missing_values_handling = "Skip",
             remove_collinear_columns = TRUE,
             nfolds = 3,
             fold_assignment = "Modulo", 
             ignore_const_cols = TRUE,
             solver = "COORDINATE_DESCENT", # "L_BFGS" "COORDINATE_DESCENT"
+            lambda_search = T,
             early_stopping = TRUE,
-            max_iterations = 100,
+            max_iterations = 200,
             model_id = "glm_housing_v1",
             seed = 333)
 ## performance of the model
@@ -169,8 +164,8 @@ autoMl <- h2o.automl(
   stopping_metric = "RMSLE",
   nfolds = 3,
   seed = 333,
-  max_runtime_secs = 600,
-  stopping_rounds = 2,
+  max_runtime_secs = 900,
+  stopping_rounds = 3,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
 )
@@ -182,7 +177,7 @@ h2o.rmsle(autoMl@leader, valid = T)
 #### Predict and submit                                        ####
 ###################################################################
 autoStack <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180119_220836")
-autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180119_220836_model_0")
+autoGLM <- h2o.getModel("GLM_grid_0_AutoML_20180122_091831_model_0")
 autoGBM <- h2o.getModel("GBM_grid_0_AutoML_20180119_220836_model_15")   
 finalPredictions <- h2o.predict(
   object =  autoMl@leader
