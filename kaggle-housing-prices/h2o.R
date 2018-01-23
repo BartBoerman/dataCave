@@ -1,6 +1,7 @@
 ###################################################################
 #### References                                                ####
 ###################################################################
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/drf.html
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/gbm.html
 ## https://github.com/h2oai/h2o-tutorials/blob/master/tutorials/gbm-randomforest/GBM_RandomForest_Example.R
 ## https://blog.h2o.ai/2016/06/h2o-gbm-tuning-tutorial-for-r/
@@ -43,7 +44,7 @@ rf <- h2o.randomForest(
             keep_cross_validation_predictions = TRUE,
             ## train on subset and validate against hold out data set
             #training_frame =  train.hex,
-            #validation_frame = validate.hex,     
+            #validation_frame = validate.hex, 
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             ignore_const_cols = TRUE,
@@ -51,7 +52,7 @@ rf <- h2o.randomForest(
             model_id = "gbm_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 ## performance of the model
-h2o.performance(rf, newdata = train.hex)
+h2o.performance(rf, newdata = train.full.hex)
 #h2o.performance(gbm, newdata = validate.hex)
 ## Extract specific metric
 h2o.rmsle(rf, train = T)
@@ -60,7 +61,13 @@ h2o.rmsle(h2o.performance(rf, xval = T)) ## when training with cross validation
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
 rf@model$cross_validation_metrics_summary
-
+finalPredictions <- h2o.predict(
+            object = rf
+            ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.rf.csv", force = T)
 
 
 ###################################################################
@@ -306,9 +313,9 @@ ensemble <- h2o.stackedEnsemble(
                                 y=response,                          ## the target index (what we are predicting)
                                 metalearner_algorithm = "glm",
                                 metalearner_nfolds = nFolds,
-                                model_id = "metalearnerGlm_v6",
+                                model_id = "metalearnerGlm_GbmGlmRf",
                                 keep_levelone_frame = T,
-                                base_models = list(gbm, glm, xgb, dpl))
+                                base_models = list(gbm, glm, rf))
 finalPredictions <- h2o.predict(
                               object = ensemble
                               ,newdata = test.hex)
