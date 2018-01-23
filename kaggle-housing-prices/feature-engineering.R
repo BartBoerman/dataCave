@@ -10,7 +10,7 @@ houseStyle.bin <- c("1Story" = "1Story",
                      "SFoyer" = "SFoyer",
                      "SLvl" = "SLvl") 
 full.dt[, ':=' (
-                sfTotal          = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
+                sfTotal            = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
                 hasUnfinishedLevel= ifelse(HouseStyle %in% c("1.5Unf","2.5Unf"),1,0),
                 HouseStyle = as.factor(houseStyle.bin[HouseStyle]),
                 hasOpenPorch = ifelse(OpenPorchSF > 0,1,0),
@@ -20,19 +20,21 @@ full.dt[, ':=' (
                 countBathroomsAboveGr = FullBath + HalfBath
 )]
 
-variablesDrop <- c("TotalBsmtSF","FirstFlrSF","SecondFlrSF","HouseStyle",
+variablesDrop <- c(
+                  ### Used in feature engineering 
+                  "TotalBsmtSF","FirstFlrSF","SecondFlrSF","HouseStyle",
                   "OpenPorchSF","EnclosedPorch","ThreeSsnPorch","ScreenPorch",
-                  "BsmtHalfBath","FullBath","HalfBath")
+                  "BsmtHalfBath","FullBath","HalfBath",
+                  ### bad and constand
+                  "BsmtFinSF2","WoodDeckSF","BsmtFinSF1","LowQualFinSF","PoolArea",
+                  "MasVnrArea","BsmtUnfSF", "MiscVal"
+                  )
 
 variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop),"sfTotal")
 variablesValues <- setdiff(variablesValues, variablesDrop)
 variablesFactor <- setdiff(variablesFactor, variablesDrop)
 response <- "SalePrice"  
 features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartition"))
-
-#Warning message:
-#  In .h2o.startModelJob(algo, params, h2oRestApiVersion) :
-#  Dropping bad and constant columns: [BsmtFinSF2, WoodDeckSF, Condition2PosN, Exterior1stBrkComm, BsmtFinSF1, LowQualFinSF, PoolArea, MasVnrArea, Condition2PosA, BsmtUnfSF].
 ###################################################################
 #### Feature engineering full                                  ####
 ###################################################################
@@ -133,6 +135,3 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 #                 "YearBuilt",
 #                 "YearRemodAdd",
 #                 "YrSold")
- 
-
-
