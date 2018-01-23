@@ -6,12 +6,15 @@ require(robustHD)   # robust standardize
 ###################################################################
 #### Pre-processing                                            ####
 ###################################################################
-#### remove unwanted variables
-full.dt[, (variablesDrop):=NULL]
-full.dt[, (variablesFactor):=NULL]
 ##### remove outliers
 outliers.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200,Id]
 full.dt <- full.dt[!(Id %in% outliers.Id)]
+#### create index for splitting data 
+train.full.dt <- full.dt["train"]
+index <- createDataPartition(train.full.dt$Neighborhood, p=0.75, list=FALSE)
+#### remove unwanted variables
+full.dt[, (variablesDrop):=NULL]
+full.dt[, (variablesFactor):=NULL]
 ##### ordinal factors
 ## convert ordinal factors to integers. h2o does not support ordered factors.
 changeColType <- ordinalFactors
@@ -37,15 +40,8 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 #### Split data                                                ####
 ###################################################################
 ## split in train and test after engineering. Split by key is fasted method.
-setkey(full.dt,"dataPartition") 
 train.full.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
-#Spliting training set into train and validate based on OverallQual
-set.seed(333)
-index <- createDataPartition(train.full.dt$OverallQual, p=0.80, list=FALSE)
+#Spliting training set into train and validate
 train.dt <- train.full.dt[index,]
 validate.dt <- train.full.dt[-index,]
-
-
-
-
