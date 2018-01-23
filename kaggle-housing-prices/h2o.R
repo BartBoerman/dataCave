@@ -3,6 +3,12 @@
 ###################################################################
 ## https://github.com/h2oai/h2o-tutorials/blob/master/tutorials/gbm-randomforest/GBM_RandomForest_Example.R
 ## https://blog.h2o.ai/2016/06/h2o-gbm-tuning-tutorial-for-r/
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/gbm.html
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/glm.html
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/xgboost.html
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/deep-learning.html
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/drf.html
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/stacked-ensembles.html
 ###################################################################
 #### Dependencies                                              ####
 ###################################################################
@@ -16,22 +22,28 @@ h2o.connect(
 #### Upload data to h2o                                        ####
 ###################################################################
 ## upload to h2o cloud which converts data to a h2o data frame (hex)
+h2o.rm("train.full.hex")
+train.full.hex <- as.h2o(train.full.dt,"train.full.hex") ## when not using a validation hold out set
 h2o.rm("train.hex")
 train.hex <- as.h2o(train.dt,"train.hex")
 h2o.rm("test.hex")
 test.hex <- as.h2o(test.dt,"test.hex")
 h2o.rm("valid.hex")
-validate.hex <- as.h2o(validate.dt,"valid.hex")
-
+validate.hex <- as.h2o(validate.dt,"valid.hex") ## when using a hold oud set for validation
 ###################################################################
 #### Gradient Boosting Machine (GBM)                           ####
 ###################################################################
 gbm <- h2o.gbm(
-            training_frame = train.hex,          ## the H2O frame for training
-            validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+            ## train on full data with cross validation
+            training_frame =  train.full.hex, 
+            nfolds =5,
+            fold_assignment = "Modulo",
+            #keep_cross_validation_predictions = TRUE,
+            ## train on subset and validate against hold out data set
+            #training_frame =  train.hex,
+            #validation_frame = validate.hex,     
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
-            nfolds = 5,
             ntrees = 100, # first do 1000, then plot, then adjust to 40
             max_depth = 3,
             distribution = "AUTO",
@@ -42,16 +54,16 @@ gbm <- h2o.gbm(
             #sample_rate = 0.8,                   ## sample 80% of rows per tree
             #col_sample_rate = 0.8,               ## sample 80% of columns per split
             ignore_const_cols = TRUE,
-            stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
             model_id = "gbm_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 ## performance of the model
 h2o.performance(gbm, newdata = train.hex)
-h2o.performance(gbm, newdata = validate.hex)
+#h2o.performance(gbm, newdata = validate.hex)
 ## Extract specific metric
 h2o.rmsle(gbm, train = T)
-h2o.rmsle(gbm, valid = T)
-h2o.rmsle(h2o.performance(gbm, xval = T))
+#h2o.rmsle(gbm, valid = T) ## when training with a validation frame
+h2o.rmsle(h2o.performance(gbm, xval = T)) ## when training with cross validation
 ## Show a detailed summary of the cross validation metrics
 ## This gives you an idea of the variance between the folds
 gbm@model$cross_validation_metrics_summary
@@ -81,16 +93,20 @@ h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.gbm.csv",
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
 glm <- h2o.glm(
-            training_frame = train.hex,          ## the H2O frame for training
-            validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+            ## train on full data with cross validation
+            training_frame =  train.full.hex, 
+            nfolds = 5,
+            fold_assignment = "Modulo", 
+            #keep_cross_validation_predictions = TRUE,
+            ## train on subset and validate against hold out data set
+            #training_frame =  train.hex,
+            #validation_frame = validate.hex,     
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             family = "gaussian",
             link = "identity",
-            standardize = TRUE,             
+            standardize = TRUE,  
             remove_collinear_columns = TRUE,
-            nfolds = 3,
-            fold_assignment = "Modulo", 
             ignore_const_cols = TRUE,
             solver = "COORDINATE_DESCENT", # "L_BFGS" "COORDINATE_DESCENT"
             lambda_search = T,
@@ -121,8 +137,15 @@ h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.glm.csv",
 ###################################################################
 #### XGBoost                                                   ####
 ###################################################################
-xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for training
-                       validation_frame = validate.hex,     ## the H2O frame for validation (not required)
+xgb <- h2o.xgboost(
+                       ## train on full data with cross validation
+                       training_frame =  train.full.hex, 
+                       nfolds = 5,
+                       fold_assignment = "Modulo", 
+                       #keep_cross_validation_predictions = TRUE,
+                       ## train on subset and validate against hold out data set
+                       #training_frame =  train.hex,
+                       #validation_frame = validate.hex,    
                        x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
                        y=response,                          ## what we are predicting,alternativaly, e.g. 81
                        distribution = "gaussian",
@@ -134,15 +157,13 @@ xgb <- h2o.xgboost(training_frame = train.hex,          ## the H2O frame for tra
                        sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
                        col_sample_rate = 1.0,
                        #max_abs_leafnode_pred = 0.2,          ## Reduce overfitting by limiting the absolute value of a leafe node prediction
-                       #min_split_improvement = 1e-3,         ## The value of this option specifies the minimum relative improvement in squared error reduction in order for a split to happen. When properly tuned, this option can help reduce overfitting. Optimal values would be in the 1e-10…1e-3 range.  
-                       nfolds =3,
-                       #fold_assignment = "Modulo",
-                       #keep_cross_validation_predictions = TRUE,
+                       min_split_improvement = 1e-3,         ## The value of this option specifies the minimum relative improvement in squared error reduction in order for a split to happen. When properly tuned, this option can help reduce overfitting. Optimal values would be in the 1e-10…1e-3 range.  
                        seed = 333)
 ## Extract specific metric
 h2o.rmsle(xgb, train = T)
-h2o.rmsle(xgb, valid = T)
+#h2o.rmsle(xgb, valid = T)
 h2o.rmsle(h2o.performance(xgb, xval = T))
+xgb@model$cross_validation_metrics_summary
 ###################################################################
 #### Predict xgb                                               ####
 ###################################################################
@@ -157,17 +178,21 @@ h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.xgb.csv",
 #### Automated machine learning                                ####
 ###################################################################
 autoMl <- h2o.automl(
-  training_frame = train.hex,        ## the H2O frame for training
-  validation_frame = validate.hex,      ## the H2O frame for validation (not required)
-  x=features,                        ## the predictor columns, by column index
-  y=response,                          ## the target index (what we are predicting)
-  stopping_metric = "RMSLE",
-  nfolds = 3,
-  seed = 333,
-  max_runtime_secs = 900,
-  stopping_rounds = 3,
-  stopping_tolerance = 0.001,
-  project_name = "KaggleHousingPrices"
+                  ## train on full data with cross validation
+                  training_frame =  train.full.hex, 
+                  nfolds = 5,
+                  #keep_cross_validation_predictions = TRUE,
+                  ## train on subset and validate against hold out data set
+                  #training_frame =  train.hex,
+                  #validation_frame = validate.hex,    
+                  x=features,                        ## the predictor columns, by column index
+                  y=response,                          ## the target index (what we are predicting)
+                  stopping_metric = "RMSLE",
+                  seed = 333,
+                  max_runtime_secs = 600,
+                  stopping_rounds = 3,
+                  stopping_tolerance = 0.001,
+                  project_name = "KaggleHousingPrices"
 )
 autoMl@leaderboard ## Models evaluated bu h2o
 ## Extract specific metric
