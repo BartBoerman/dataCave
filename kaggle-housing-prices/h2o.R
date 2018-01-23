@@ -1,12 +1,13 @@
 ###################################################################
 #### References                                                ####
 ###################################################################
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/gbm.html
 ## https://github.com/h2oai/h2o-tutorials/blob/master/tutorials/gbm-randomforest/GBM_RandomForest_Example.R
 ## https://blog.h2o.ai/2016/06/h2o-gbm-tuning-tutorial-for-r/
-## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/gbm.html
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/glm.html
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/xgboost.html
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/deep-learning.html
+#  https://github.com/h2oai/h2o-tutorials/blob/master/tutorials/deeplearning/deeplearning.R
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/drf.html
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/stacked-ensembles.html
 ###################################################################
@@ -33,12 +34,14 @@ validate.hex <- as.h2o(validate.dt,"valid.hex") ## when using a hold oud set for
 ###################################################################
 #### Gradient Boosting Machine (GBM)                           ####
 ###################################################################
+# Number of CV folds 
+nFolds <- 5
 gbm <- h2o.gbm(
             ## train on full data with cross validation
             training_frame =  train.full.hex, 
-            nfolds =5,
+            nfolds =nFolds,
             fold_assignment = "Modulo",
-            #keep_cross_validation_predictions = TRUE,
+            keep_cross_validation_predictions = TRUE,
             ## train on subset and validate against hold out data set
             #training_frame =  train.hex,
             #validation_frame = validate.hex,     
@@ -95,9 +98,9 @@ h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.gbm.csv",
 glm <- h2o.glm(
             ## train on full data with cross validation
             training_frame =  train.full.hex, 
-            nfolds = 5,
+            nfolds = nFolds,
             fold_assignment = "Modulo", 
-            #keep_cross_validation_predictions = TRUE,
+            keep_cross_validation_predictions = TRUE,
             ## train on subset and validate against hold out data set
             #training_frame =  train.hex,
             #validation_frame = validate.hex,     
@@ -211,3 +214,99 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.autML.csv", force = T)
+
+h2o.rmsle(autoMl@leader, valid = T)
+###################################################################
+#### Deeplearning                                              ####
+###################################################################
+dpl <- h2o.deeplearning(
+            ## train on full data with cross validation
+            training_frame =  train.full.hex, 
+            nfolds = 3,
+            #keep_cross_validation_predictions = TRUE,
+            ## train on subset and validate against hold out data set
+            #training_frame =  train.hex,
+            #validation_frame = validate.hex,    
+            x=features,                        ## the predictor columns, by column index
+            y=response,                          ## the target index (what we are predicting)
+            distribution = "AUTO",
+            standardize = TRUE,
+            missing_values_handling = "Skip",
+            activation = "TanhWithDropout",
+            input_dropout_ratio = 0.01 ,          ## specify the input layer dropout ratio to improve generalization. Suggested values are 0.1 or 0.2.
+            hidden=c(50,50,50),                  ## small network, runs faster
+            hidden_dropout_ratios = c(0.05,0.05,0.05),
+            epochs=18,                      ## See plot(dpl). Specify the number of times to iterate (stream) the dataset. The value can be a fraction.
+            regression_stop = -1, ## Specify the stopping criterion for regression error (MSE) on the training data. When the error is at or below this threshold, training stops. To disable this option, enter -1.    
+            stopping_rounds = 3, stopping_tolerance = 0.02, stopping_metric = "RMSLE", ## 0.01 means 1% improvement
+            seed = 333,
+            model_id = "dpl_housing_v1"
+)
+summary(dpl)
+plot(dpl)
+## Extract specific metric
+h2o.rmsle(dpl, train = T)
+h2o.rmsle(dpl, valid = T)
+h2o.rmsle(h2o.performance(dpl, xval = T))
+dpl@model$cross_validation_metrics_summary
+finalPredictions <- h2o.predict(
+  object = dpl
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.dpl.csv", force = T)
+
+###################################################################
+#### Stacking                                                  ####
+###################################################################
+
+## Note: All base models must have the same cross-validation folds and
+## the cross-validated predicted values must be kept.
+
+# Train a stacked ensemble using the GBM and GLM above
+ensemble <- h2o.stackedEnsemble(
+                                ## train on full data with cross validation
+                                training_frame =  train.full.hex, 
+                                #keep_cross_validation_predictions = TRUE,
+                                ## train on subset and validate against hold out data set
+                                #training_frame =  train.hex,
+                                #validation_frame = validate.hex,    
+                                x=features,                        ## the predictor columns, by column index
+                                y=response,                          ## the target index (what we are predicting)
+                                metalearner_algorithm = "glm",
+                                metalearner_nfolds = nFolds,
+                                model_id = "metalearnerGlm",
+                                keep_levelone_frame = T,
+                                base_models = list(gbm, glm))
+
+
+finalPredictions <- h2o.predict(
+                              object = ensemble
+                              ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.ensembleGlm.csv", force = T)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
