@@ -2,6 +2,7 @@
 #### Dependencies                                              ####
 ###################################################################
 require(caret)      # (near) zero variance and dummyVars
+require(robustHD)   # robust standardize 
 ###################################################################
 #### Pre-processing                                            ####
 ###################################################################
@@ -27,7 +28,7 @@ full.dt[, (skewedVariables) := lapply(.SD, function(x) log(x)), .SDcols = skewed
 #### scale 
 ## scale (exluding response)
 varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
-full.dt <- full.dt[, (varScale) := lapply(.SD, function(x) scale(x, center = T, scale = T)), .SDcols = varScale]
+full.dt[, (varScale) := lapply(.SD, function(x) robStandardize(x, centerFun = median, scaleFun = mad)), .SDcols = varScale]
 ###################################################################
 #### Select features                                           ####
 ###################################################################
@@ -37,6 +38,13 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 ###################################################################
 ## split in train and test after engineering. Split by key is fasted method.
 setkey(full.dt,"dataPartition") 
-train.dt <- full.dt["train"]
+train.full.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
+#Spliting training set into train and validate based on OverallQual
+index <- createDataPartition(train.full.dt$OverallQual, p=0.80, list=FALSE)
+train.dt <- train.full.dt[index,]
+validate.dt <- train.full.dt[-index,]
+
+
+
 
