@@ -35,21 +35,19 @@ validate.hex <- as.h2o(validate.dt,"valid.hex") ## when using a hold oud set for
 ###################################################################
 #### Set defaults                                              ####
 ###################################################################
-# Number of CV folds 
+# Number of CV folds
+train <- h2o.getFrame("train.hex")
+test <- h2o.getFrame("valid.hex")
 nFolds <- 5
 ignoreConstCols = TRUE
 ###################################################################
 #### Random forest                                             ####
 ###################################################################
 rf <- h2o.randomForest(
-            #### Enable when cross validation is desired
-            #training_frame =  train.full.hex, 
-            #nfolds =nFolds,
-            #fold_assignment = "Modulo",
-            #keep_cross_validation_predictions = TRUE,
-            #### train on subset and validate against hold out data set
-            training_frame =  train.hex,
-            validation_frame = validate.hex, 
+            training_frame =  train, 
+            nfolds =nFolds,
+            fold_assignment = "Modulo",
+            keep_cross_validation_predictions = TRUE,
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             ignore_const_cols = ignoreConstCols,
@@ -57,26 +55,20 @@ rf <- h2o.randomForest(
             model_id = "rf_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
-h2o.performance(rf, newdata = train.full.hex)
-h2o.performance(rf, newdata = validate.hex)
+h2o.performance(rf, newdata = test)
 #### Extract specific metric
 h2o.rmsle(rf, train = T)
-h2o.rmsle(rf, valid = T) ## when training with a validation frame
 #### Cross validation metrics
-#h2o.rmsle(h2o.performance(rf, xval = T)) 
-#rf@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
+h2o.rmsle(h2o.performance(rf, xval = T)) 
+rf@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
 ###################################################################
 #### Gradient Boosting Machine (GBM)                           ####
 ###################################################################
 gbm <- h2o.gbm(
-            #### Enable when cross validation is desired
-            #training_frame =  train.full.hex, 
-            #nfolds =nFolds,
-            #fold_assignment = "Modulo",
-            #keep_cross_validation_predictions = TRUE,
-            #### train on subset and validate against hold out data set
-            training_frame =  train.hex,
-            validation_frame = validate.hex,     
+            training_frame =  train, 
+            nfolds =nFolds,
+            fold_assignment = "Modulo",
+            keep_cross_validation_predictions = TRUE,
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             ntrees = 100, 
@@ -93,26 +85,20 @@ gbm <- h2o.gbm(
             model_id = "gbm_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
-h2o.performance(gbm, newdata = train.full.hex)
-h2o.performance(gbm, newdata = validate.hex)
+h2o.performance(gbm, newdata = test)
 #### Extract specific metric
 h2o.rmsle(gbm, train = T)
-h2o.rmsle(gbm, valid = T) ## when training with a validation frame
 #### Cross validation metrics
-#h2o.rmsle(h2o.performance(rf, xval = T)) 
-#rf@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
+h2o.rmsle(h2o.performance(rf, xval = T)) 
+rf@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
 ###################################################################
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
 glm <- h2o.glm(
-            #### Enable when cross validation is desired
-            #training_frame =  train.full.hex, 
-            #nfolds = nFolds,
-            #fold_assignment = "Modulo", 
-            #keep_cross_validation_predictions = TRUE,
-            #### train on subset and validate against hold out data set
-            training_frame =  train.hex,
-            validation_frame = validate.hex,     
+            training_frame =  train, 
+            nfolds = nFolds,
+            fold_assignment = "Modulo", 
+            keep_cross_validation_predictions = TRUE,
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             family = "gaussian",
@@ -120,61 +106,23 @@ glm <- h2o.glm(
             standardize = TRUE,  
             remove_collinear_columns = TRUE,
             ignore_const_cols = ignoreConstCols,
-            solver = "COORDINATE_DESCENT", # "L_BFGS" "COORDINATE_DESCENT"
+            solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
             lambda_search = T,
             early_stopping = TRUE,
             max_iterations = 200,
             model_id = "glm_housing_v1",
             seed = 333)
 #### performance of the model
-h2o.performance(glm, newdata = train.full.hex)
-h2o.performance(glm, newdata = validate.hex)
+h2o.performance(glm, newdata = test)
 #### Extract specific metric
 h2o.rmsle(glm, train = T)
-h2o.rmsle(glm, valid = T) ## when training with a validation frame
 #### Cross validation metrics
-#h2o.rmsle(h2o.performance(glm, xval = T)) 
-#glm@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
-###################################################################
-#### XGBoost                                                   ####
-###################################################################
-xgb <- h2o.xgboost(
-                      #### Enable when cross validation is desired
-                      #training_frame =  train.full.hex, 
-                      #nfolds = nFolds,
-                      #fold_assignment = "Modulo", 
-                      #keep_cross_validation_predictions = TRUE,
-                      #### train on subset and validate against hold out data set
-                      training_frame =  train.hex,
-                      validation_frame = validate.hex,     
-                      x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-                      y=response,                          ## what we are predicting,alternativaly, e.g. 81
-                      distribution = "gaussian",
-                      #categorical_encoding = "EnumLimited",
-                      ntrees = 300,
-                      max_depth = 3,                       ## Higher values will make the model more complex and can lead to overfitting.
-                      min_rows = 4,
-                      learn_rate = 0.03,
-                      sample_rate = 1.0,                   ## Higher values may improve training accuracy. Test accuracy improves when either columns or rows are sampled.   
-                      col_sample_rate = 1.0,
-                      #max_abs_leafnode_pred = 0.2,        ## Reduce overfitting by limiting the absolute value of a leafe node prediction
-                      min_split_improvement = 1e-3,        ## The value of this option specifies the minimum relative improvement in squared error reduction in order for a split to happen. When properly tuned, this option can help reduce overfitting. Optimal values would be in the 1e-10…1e-3 range.  
-                      ignore_const_cols = ignoreConstCols,
-                      model_id = "xgb_housing_v1",         ## name the model in H2O
-                      seed = 333)
-#### performance of the model
-h2o.performance(xgb, newdata = train.full.hex)
-h2o.performance(xgb, newdata = validate.hex)
-#### Extract specific metric
-h2o.rmsle(xgb, train = T)
-h2o.rmsle(xgb, valid = T) ## when training with a validation frame
-#### Cross validation metrics
-#h2o.rmsle(h2o.performance(xgb, xval = T)) 
-#xgb@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
+h2o.rmsle(h2o.performance(glm, xval = T)) 
+glm@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
 ###################################################################
 #### Variable importance                                       ####
 ###################################################################
-model <- h2o.getModel("gbm_housing_v1")
+model <- h2o.getModel("rf_housing_v1")
 ## plot
 h2o.varimp_plot(model)
 ## create overview for future reference
@@ -190,19 +138,26 @@ featuresTop <-head(varImportance.df,50)
 ## the cross-validated predicted values must be kept.
 # Train a stacked ensemble using the GBM and GLM above
 ensemble <- h2o.stackedEnsemble(
-                                #### Enable when cross validation is desired
-                                #training_frame =  train.full.hex, 
-                                #nfolds = nFolds,
-                                #fold_assignment = "Modulo", 
-                                #keep_cross_validation_predictions = TRUE,
-                                #### train on subset and validate against hold out data set
+                                training_frame =  train, 
                                 x=features,                        ## the predictor columns, by column index
                                 y=response,                        ## the target index (what we are predicting)
                                 metalearner_algorithm = "glm",
                                 metalearner_nfolds = nFolds,
-                                model_id = "metalearnerGlm_GbmGlmRf",
+                                model_id = "metalearnerGlm_GbmGlmRf_v2",
                                 keep_levelone_frame = T,
                                 base_models = list(gbm, glm, rf))
+###################################################################
+#### Compare performance of the model on the test data        #####
+###################################################################
+perfEnsemble <- h2o.performance(ensemble, newdata = test)
+## Compare to base learner performance on the test set
+perfRfTest <- h2o.performance(rf, newdata = test)
+perfGbmTest <- h2o.performance(gbm, newdata = test)
+perfGlmTest <- h2o.performance(glm, newdata = test)
+baselearnerMaxRmsleTest <- max(h2o.rmsle(perfRfTest), h2o.rmsle(perfGbmTest), h2o.rmsle(perfGlmTest))
+ensembleRsmleTest <- h2o.rmsle(perfEnsemble)
+print(sprintf("Best base-learner RSMLE:  %s", baselearnerMaxRmsleTest))
+print(sprintf("Ensemble test RSMLE:  %s", ensembleRsmleTest))
 ###################################################################
 #### Predict                                                   ####
 ###################################################################
