@@ -1,6 +1,9 @@
-require(caret)
 ###############################################################################
-#### One hot encoding of factor variables with dummyVars from caret        ####                                                   ####
+#### Dependencies                                                          ####
+###############################################################################
+require(caret) ## One hot encoding
+###############################################################################
+#### One hot encoding with dummyVars                                       ####                                                   ####
 ###############################################################################
 ## formulala for one hot encoding
 f <- paste('~', paste(variablesFactor, collapse = ' + '))
@@ -39,8 +42,4 @@ full.dummyVars.dt <- as.data.table(predict(encoder, full.dt))
 full.dummyVars.dt <- full.dummyVars.dt[,!c(missingLevels), with=FALSE] ## gives error because we solved some
 ## Combine with full data sets
 full.dt <- cbind(full.dt,full.dummyVars.dt)
-###############################################################################
-##### Remove original factors from data                                    ####
-###############################################################################
-#full.dt <- full.dt[,!c(variablesFactor), with=FALSE]
 
