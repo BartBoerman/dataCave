@@ -13,6 +13,10 @@ full.dt[,OverallCond:=ordered(OverallCond, levels = c(1:10))]
 full.dt[,KitchenQual:=ordered(KitchenQual, levels = c("Po","Fa","TA","Gd","Ex"))]
 ## GarageFinish (contains NA's)
 full.dt[,GarageFinish:=ordered(GarageFinish, levels = c("None","Unf","RFn","Fin"))]
+## GarageQual
+full.dt[,GarageQual:=ordered(GarageQual, levels = c("None","Po","Fa","TA","Gd","Ex"))]
+## GarageCond
+full.dt[,GarageCond:=ordered(GarageCond, levels = c("None","Po","Fa","TA","Gd","Ex"))]
 ## ExterQual, evaluates the quality of the material on the exterior  
 full.dt[,ExterQual:=ordered(ExterQual, levels = c("Po","Fa","TA","Gd","Ex"))]
 ## ExterCond, evaluates the present condition of the material on the exterior
@@ -34,7 +38,7 @@ full.dt[,Fence:=ordered(Fence, levels = c("None","MnWw","MnPrv","GdWo","GdPrv"))
 ## PoolQC
 full.dt[,PoolQC:=ordered(PoolQC, levels = c("None","Fa","Gd","Ex"))]
 ## all ordinal factors
-ordinalFactors <- c("OverallQual","OverallCond","KitchenQual","GarageFinish",
+ordinalFactors <- c("OverallQual","OverallCond","KitchenQual","GarageFinish","GarageQual","GarageCond",
                     "ExterQual","ExterCond","BsmtQual","BsmtCond","BsmtExposure",
                     "BsmtFinType1","FireplaceQu","Electrical","Fence","PoolQC")
 variablesFactor <- setdiff(variablesFactor, ordinalFactors)
