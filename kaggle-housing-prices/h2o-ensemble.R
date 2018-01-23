@@ -89,8 +89,8 @@ h2o.performance(gbm, newdata = test)
 #### Extract specific metric
 h2o.rmsle(gbm, train = T)
 #### Cross validation metrics
-h2o.rmsle(h2o.performance(rf, xval = T)) 
-rf@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
+h2o.rmsle(h2o.performance(gbm, xval = T)) 
+gbm@model$cross_validation_metrics_summary ## This gives you an idea of the variance between the folds
 ###################################################################
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
