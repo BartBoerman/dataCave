@@ -7,12 +7,16 @@ require(robustHD)   # robust standardize
 #### Pre-processing                                            ####
 ###################################################################
 ##### remove outliers
-outliers.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200,Id]
-full.dt <- full.dt[!(Id %in% outliers.Id)]
+outliersHigh.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200,Id]
+outliersLowPrice.Id <-  train.dt[(GarageArea > 1000 & SalePrice  < 200000) |
+                            (GrLivArea > 4000 & SalePrice   < 200000) | 
+                            (TotalBsmtSF > 6000 & SalePrice < 200000) |
+                            (TotRmsAbvGrd > 12 & SalePrice  < 300000), Id]
+full.dt <- full.dt[!(Id %in% outliersHigh.Id) & !(Id %in% outliersLowPrice.Id)]
 #### create index for splitting data 
 setkey(full.dt,dataPartition)
 train.full.dt <- full.dt["train"]
-index <- createDataPartition(train.full.dt$OverallQual, p=0.80, list=FALSE)
+index <- createDataPartition(train.full.dt$overallQualGood, p=0.80, list=FALSE)
 #### remove unwanted variables
 full.dt[, (variablesDrop):=NULL]
 full.dt[, (variablesFactor):=NULL]
@@ -46,3 +50,4 @@ test.dt <- full.dt["test"]
 #Spliting training set into train and validate
 train.dt <- train.full.dt[index,]
 validate.dt <- train.full.dt[-index,]
+
