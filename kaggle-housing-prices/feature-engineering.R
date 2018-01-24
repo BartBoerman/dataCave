@@ -11,28 +11,29 @@ houseStyle.bin <- c("1Story" = "1Story",
                      "SLvl" = "SLvl") 
 full.dt[, ':=' (
                 sfTotal            = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
+                overallQualGood    = ifelse(as.integer(OverallQual) - 5 < 0, 0, as.integer(OverallQual) - 5),
+                OverallQualBad     = if_else(5 - as.integer(OverallQual) < 0, 0, 5 - as.integer(OverallQual)),
                 hasUnfinishedLevel= ifelse(HouseStyle %in% c("1.5Unf","2.5Unf"),1,0),
                 HouseStyle = as.factor(houseStyle.bin[HouseStyle]),
-                hasOpenPorch = ifelse(OpenPorchSF > 0,1,0),
-                hasEnclosedPorch = ifelse(EnclosedPorch > 0,1,0),
-                hasThreeSsnPorch = ifelse(ThreeSsnPorch > 0,1,0),
-                hasScreenPorch = ifelse(ScreenPorch > 0,1,0),
-                countBathroomsAboveGr = FullBath + HalfBath
+                sfPorch = EnclosedPorch + ThreeSsnPorch + ScreenPorch,
+                countBathroomsAboveGr = FullBath + HalfBath,
+                isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0)
 )]
 
 variablesDrop <- c(
-                  ### Used in feature engineering 
-                  "TotalBsmtSF","FirstFlrSF","SecondFlrSF","HouseStyle",
-                  "OpenPorchSF","EnclosedPorch","ThreeSsnPorch","ScreenPorch",
-                  "BsmtHalfBath","FullBath","HalfBath",
-                  ### bad and constand
+                  #### used in feature engineering
+                  "OverallQual","FirstFlrSF","SecondFlrSF", 
+                  #### bad and constand
                   "BsmtFinSF2","WoodDeckSF","BsmtFinSF1","LowQualFinSF","PoolArea",
-                  "MasVnrArea","BsmtUnfSF", "MiscVal"
+                  "MasVnrArea","BsmtUnfSF", "MiscVal","EnclosedPorch","ThreeSsnPorch","ScreenPorch",
+                  #### others
+                  "MoSold"
                   )
 
-variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop),"sfTotal")
+variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop)) # ,"sfTotal"
 variablesValues <- setdiff(variablesValues, variablesDrop)
 variablesFactor <- setdiff(variablesFactor, variablesDrop)
+ordinalFactors <- setdiff(ordinalFactors, variablesDrop)
 response <- "SalePrice"  
 features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartition"))
 ###################################################################
