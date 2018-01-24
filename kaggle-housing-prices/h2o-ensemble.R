@@ -38,7 +38,7 @@ validate.hex <- as.h2o(validate.dt,"valid.hex") ## when using a hold oud set for
 # Number of CV folds
 train <- h2o.getFrame("train.hex")
 test <- h2o.getFrame("valid.hex")
-nFolds <- 5
+nFolds <- 3
 ignoreConstCols = TRUE
 ###################################################################
 #### Random forest                                             ####
@@ -51,7 +51,7 @@ rf <- h2o.randomForest(
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             ignore_const_cols = ignoreConstCols,
-            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "deviance", 
             model_id = "rf_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
@@ -74,14 +74,14 @@ gbm <- h2o.gbm(
             ntrees = 100, 
             max_depth = 3,
             distribution = "AUTO",
-            min_rows = 4,
-            learn_rate=0.3,
+            min_rows = 1,
+            learn_rate=0.2,
             min_split_improvement = 1e-3,
             #learn_rate_annealing = 0.99,         ## learning rate annealing: learning_rate shrinks by 1% after every tree
-            #sample_rate = 0.8,                   ## sample 80% of rows per tree
-            #col_sample_rate = 0.8,               ## sample 80% of columns per split
+            sample_rate = 1.0,                   ## sample 80% of rows per tree
+            col_sample_rate = 1.0,               ## sample 80% of columns per split
             ignore_const_cols = ignoreConstCols,
-            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "RMSLE", 
+            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "deviance", 
             model_id = "gbm_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
@@ -143,6 +143,7 @@ ensemble <- h2o.stackedEnsemble(
                                 y=response,                        ## the target index (what we are predicting)
                                 metalearner_algorithm = "glm",
                                 metalearner_nfolds = nFolds,
+                                metalearner_fold_assignment = "Modulo",
                                 model_id = "metalearnerGlm_GbmGlmRf_v2",
                                 keep_levelone_frame = T,
                                 base_models = list(gbm, glm, rf))
@@ -156,7 +157,7 @@ perfGbmTest <- h2o.performance(gbm, newdata = test)
 perfGlmTest <- h2o.performance(glm, newdata = test)
 baselearnerMaxRmsleTest <- max(h2o.rmsle(perfRfTest), h2o.rmsle(perfGbmTest), h2o.rmsle(perfGlmTest))
 ensembleRsmleTest <- h2o.rmsle(perfEnsemble)
-print(sprintf("Best base-learner RSMLE:  %s", baselearnerMaxRmsleTest))
+print(sprintf("Best base-learner test RSMLE:  %s", baselearnerMaxRmsleTest))
 print(sprintf("Ensemble test RSMLE:  %s", ensembleRsmleTest))
 ###################################################################
 #### Predict                                                   ####
@@ -168,3 +169,97 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.ensembleGlm.csv", force = T)
+
+
+
+
+## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/grid-search.html#grid-search-in-r
+
+
+rf_grid <- h2o.grid(algorithm = "drf",
+                    grid_id = "rf_grid_housing",
+                    training_frame =  train, 
+                    nfolds =nFolds,
+                    fold_assignment = "Modulo",
+                    keep_cross_validation_predictions = TRUE,
+                    x=features,
+                    y=response,
+                    min_rows = 1,
+                    ignore_const_cols = ignoreConstCols,
+                    min_split_improvement = 1e-3,
+                    stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "deviance", ## RMSLE",         
+                    hyper_params = hyper_params,
+                    search_criteria = search_criteria)
+
+
+rf <- h2o.getModel(rf_grid@summary_table$model_ids[[1]])
+
+perfGbmTest <- h2o.performance(rf, newdata = test)
+
+
+
+
+
+#### GBM Hyperparamters
+learn_rate_opt        <- c(0.01, 0.02, 0.03,0.04,0.05,0.06,0.08)
+max_depth_opt         <- c(2, 3, 4, 5)
+col_sample_rate_opt   <- c(1.0)
+sample_rate_opt       <- c(1.0)
+hyper_params <- list(learn_rate = learn_rate_opt,
+                     max_depth = max_depth_opt,
+                     col_sample_rate = col_sample_rate_opt,
+                     sample_rate = sample_rate_opt)
+
+search_criteria <- list(strategy = "RandomDiscrete", max_models = 50, seed = 333)
+
+gbm_grid <- h2o.grid(algorithm = "gbm",
+                     grid_id = "gbm_grid_housing",
+                     x = features,
+                     y = response,
+                     training_frame = train,
+                     distribution = "AUTO",
+                     ntrees = 100,
+                     min_rows = 1,
+                     min_split_improvement = 1e-3,
+                     nfolds = nFolds,
+                     fold_assignment = "Modulo",
+                     keep_cross_validation_predictions = TRUE,
+                     stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "RMSLE",
+                     ignore_const_cols = TRUE,
+                     hyper_params = hyper_params,
+                     search_criteria = search_criteria)
+
+gbm <- h2o.getModel(gbm_grid@summary_table$model_ids[[1]])
+
+perfGbmTest <- h2o.performance(gbm, newdata = test)
+
+ntrees_opt            <- c(10,20, 50)
+mtries_opt            <- c(50,60,70,80,90)         
+max_depth_opt         <- c(5, 6, 7,8,9,10)
+hyper_params <- list(ntrees = ntrees_opt,
+                     mtries = mtries_opt,
+                     max_depth = max_depth_opt)
+
+search_criteria <- list(strategy = "RandomDiscrete", max_models = 500, seed = 333)
+
+
+glm <- h2o.glm(
+              training_frame =  train, 
+              nfolds = nFolds,
+              fold_assignment = "Modulo", 
+              keep_cross_validation_predictions = TRUE,
+              x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
+              y=response,                          ## what we are predicting,alternativaly, e.g. 81
+              family = "gaussian",
+              link = "identity",
+              standardize = TRUE,  
+              remove_collinear_columns = TRUE,
+              ignore_const_cols = ignoreConstCols,
+              solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
+              lambda_search = T,
+              early_stopping = TRUE,
+              max_iterations = 200,
+              model_id = "glm_housing_v1",
+              seed = 333)
+
+
