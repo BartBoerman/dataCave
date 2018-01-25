@@ -318,7 +318,7 @@ boruta.train <- Boruta(SalePrice~.-c(dataPartition,Id), data = tmp.dt, doTrace =
 boruta.final <- TentativeRoughFix(boruta.train)
 boruta.df <- attStats(boruta.final)
 featuresBoruta <- getSelectedAttributes(boruta.final, withTentative = T)
-write.csv(featuresBoruta, file = featuresBoruta.csv, append = FALSE, sep = ",",na="NA")
+write.csv(featuresBoruta, file = "featuresBoruta.csv")
 
 
 
