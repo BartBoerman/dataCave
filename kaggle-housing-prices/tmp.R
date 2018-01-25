@@ -252,11 +252,71 @@ full.dt[, ':=' (hasRoofMatlWoodCly = ifelse(RoofMatl %in% c("WdShake","WdShngl",
 full.dummyVars.dt <- full.dummyVars.dt[,!c(missingLevels,"dataPartition"), with=FALSE]
 
 
+###################################################################
+#### funModeling                                               ####
+###################################################################
+## https://livebook.datascienceheroes.com/exploratory-data-analysis.html
+require(funModeling) ## alternative to describe in psych package
+#### Data set health status
+## Use case: analyze the zeros, missing values (NA) and number of unique values for a given dataset.
+df_status(train.dt)
+#### Data profiling
+## Descriptive statistics for numerical variables
+profiling_num(train.dt, digits = 2)
+## Getting frequency distributions for categoric variables
+## This fill  plot frequencies
+freq(data = full.dt, input = variablesFactor, plot = TRUE)
+#### Correlation (Pearson coefficient) of nummerical variables agaimst our target
+## If target is categorical, then it will be converted to numeric.
+correlation_table(train.dt, target = "SalePrice")
+#### Variable importance ranking based on information theory 
+## Metrics are: entropy (en), mutual information (mi), information gain (ig) and gain ratio (gr)
+tmp <- train.dt[,c(variablesFactor,"SalePrice"), with = FALSE]
+variable_importance = var_rank_info(data = tmp, target = "SalePrice")
+
+# Plotting 
+ggplot(variable_importance, aes(x = reorder(var, 
+                                            gr), y = gr, fill = var)) + geom_bar(stat = "identity") + 
+  coord_flip() + theme_bw() + xlab("") + 
+  ylab("Variable Importance (based on Information Gain)") + 
+  guides(fill = FALSE)
+#### Binning
+Hmisc::describe(train.dt$OverallQual)
+
+tmp <- copy(train.dt)
+tmp$GrLivArea <- equal_freq(tmp$GrLivArea, n_bins = 10)
+tmp$LotArea <- equal_freq(tmp$LotArea, n_bins = 5)
+tmp$GarageArea <- equal_freq(tmp$GarageArea, n_bins = 5)
+
+ggplot(tmp, aes(x =  GarageArea, y = SalePrice)) +
+      geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+      theme(text = element_text(size=9))
+
+ggplot(tmp, aes(x =  TotRmsAbvGrd, y = SalePrice)) +
+  geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+  theme(text = element_text(size=9))
+
+ggplot(tmp, aes(x =  SaleCondition, y = SalePrice)) +
+  geom_bar(position = "dodge", stat = "summary", fun.y = "median", na.rm = T) +
+  theme(text = element_text(size=9))
+
+tmp2 <- tmp[GarageCars > 3 | TotRmsAbvGrd > 11]
+
+tukey_outlier(train.dt$LotArea)
+tukey_outlier(train.dt$GrLivArea)
+tukey_outlier(train.dt$SalePrice)
 
 
+###################################################################
+#### Boruta feature selection                                  ####
+###################################################################
+require(Boruta)
+set.seed(333)
 
-
-
+tmp.dt <- copy(full.dt)
+tmp.dt <- tmp.dt[dataPartition == "train"]
+boruta.train <- Boruta(SalePrice~.-c(dataPartition,Id), data = tmp.dt, doTrace = 0)
+boruta.final <- TentativeRoughFix(boruta.train)
 
 
 
