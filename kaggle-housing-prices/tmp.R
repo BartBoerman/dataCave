@@ -313,13 +313,12 @@ tukey_outlier(train.dt$SalePrice)
 require(Boruta)
 set.seed(333)
 
-tmp.dt <- copy(full.dt)
-tmp.dt <- tmp.dt[dataPartition == "train"]
+tmp.dt <- copy(train.dt)
 boruta.train <- Boruta(SalePrice~.-c(dataPartition,Id), data = tmp.dt, doTrace = 0)
 boruta.final <- TentativeRoughFix(boruta.train)
 boruta.df <- attStats(boruta.final)
 featuresBoruta <- getSelectedAttributes(boruta.final, withTentative = T)
-
+write.csv(featuresBoruta, file = featuresBoruta.csv, append = FALSE, sep = ",",na="NA")
 
 
 
