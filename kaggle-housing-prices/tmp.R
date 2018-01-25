@@ -313,7 +313,7 @@ tukey_outlier(train.dt$SalePrice)
 require(Boruta)
 set.seed(333)
 
-tmp.dt <- copy(train.dt)
+tmp.dt <- full.dt[dataPartition == "train",]
 boruta.train <- Boruta(SalePrice~.-c(dataPartition,Id), data = tmp.dt, doTrace = 0)
 boruta.final <- TentativeRoughFix(boruta.train)
 boruta.df <- attStats(boruta.final)
