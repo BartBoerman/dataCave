@@ -16,7 +16,7 @@ full.dt <- full.dt[!(Id %in% outliersHigh.Id) & !(Id %in% outliersLowPrice.Id)]
 #### create index for splitting data 
 setkey(full.dt,dataPartition)
 train.full.dt <- full.dt["train"]
-index <- createDataPartition(train.full.dt$overallQualGood, p=0.80, list=FALSE)
+index <- createDataPartition(train.full.dt$OverallQual, p=0.80, list=FALSE)
 #### remove unwanted variables
 full.dt[, (variablesDrop):=NULL]
 full.dt[, (variablesFactor):=NULL]
