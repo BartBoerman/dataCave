@@ -172,10 +172,24 @@ h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.ensembleG
 
 
 
-
+###################################################################
+#### Parameter tuning with grid search                         ####
+###################################################################
 ## http://docs.h2o.ai/h2o/latest-stable/h2o-docs/grid-search.html#grid-search-in-r
-
-
+## https://blog.h2o.ai/2016/06/hyperparameter-optimization-in-h2o-grid-search-random-search-and-the-future/
+#### Hyper parameters
+ntrees_opt            <- c(10,20,50,70,100)
+mtries_opt            <- c(50,60,70,80,90)         
+max_depth_opt         <- c(5,6,7,8,9,10)
+hyper_params <- list(ntrees = ntrees_opt,
+                     mtries = mtries_opt,
+                     max_depth = max_depth_opt)
+#### Search criteria
+search_criteria <- list(strategy = "RandomDiscrete",
+                        stopping_rounds = 3, stopping_tolerance = 0.001, stopping_metric = "deviance",
+                        max_models = 500, 
+                        seed = 333)
+#### Grid search
 rf_grid <- h2o.grid(algorithm = "drf",
                     grid_id = "rf_grid_housing",
                     training_frame =  train, 
@@ -185,22 +199,15 @@ rf_grid <- h2o.grid(algorithm = "drf",
                     x=features,
                     y=response,
                     min_rows = 1,
-                    ignore_const_cols = ignoreConstCols,
+                    ignore_const_cols = TRUE,
                     min_split_improvement = 1e-3,
-                    stopping_rounds = 1, stopping_tolerance = 0.01, stopping_metric = "deviance", ## RMSLE",         
                     hyper_params = hyper_params,
                     search_criteria = search_criteria)
-
-
+#### Get best model
 rf <- h2o.getModel(rf_grid@summary_table$model_ids[[1]])
 
 perfGbmTest <- h2o.performance(rf, newdata = test)
 
-
-
-
-
-#### GBM Hyperparamters
 learn_rate_opt        <- c(0.01, 0.02, 0.03,0.04,0.05,0.06,0.08)
 max_depth_opt         <- c(2, 3, 4, 5)
 col_sample_rate_opt   <- c(1.0)
@@ -233,14 +240,6 @@ gbm <- h2o.getModel(gbm_grid@summary_table$model_ids[[1]])
 
 perfGbmTest <- h2o.performance(gbm, newdata = test)
 
-ntrees_opt            <- c(10,20, 50)
-mtries_opt            <- c(50,60,70,80,90)         
-max_depth_opt         <- c(5, 6, 7,8,9,10)
-hyper_params <- list(ntrees = ntrees_opt,
-                     mtries = mtries_opt,
-                     max_depth = max_depth_opt)
-
-search_criteria <- list(strategy = "RandomDiscrete", max_models = 500, seed = 333)
 
 
 glm <- h2o.glm(
@@ -248,8 +247,8 @@ glm <- h2o.glm(
               nfolds = nFolds,
               fold_assignment = "Modulo", 
               keep_cross_validation_predictions = TRUE,
-              x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
-              y=response,                          ## what we are predicting,alternativaly, e.g. 81
+              x=features,          
+              y=response,          
               family = "gaussian",
               link = "identity",
               standardize = TRUE,  
@@ -258,8 +257,6 @@ glm <- h2o.glm(
               solver = "L_BFGS", # "L_BFGS" "COORDINATE_DESCENT"
               lambda_search = T,
               early_stopping = TRUE,
-              max_iterations = 200,
-              model_id = "glm_housing_v1",
-              seed = 333)
+              max_iterations = 200,)
 
 
