@@ -317,7 +317,8 @@ tmp.dt <- copy(full.dt)
 tmp.dt <- tmp.dt[dataPartition == "train"]
 boruta.train <- Boruta(SalePrice~.-c(dataPartition,Id), data = tmp.dt, doTrace = 0)
 boruta.final <- TentativeRoughFix(boruta.train)
-
+boruta.df <- attStats(boruta.final)
+featuresBoruta <- getSelectedAttributes(boruta.final, withTentative = T)
 
 
 
