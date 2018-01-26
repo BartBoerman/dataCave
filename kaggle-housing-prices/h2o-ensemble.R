@@ -30,14 +30,14 @@ h2o.rm("train.hex")
 train.hex <- as.h2o(train.dt,"train.hex")
 h2o.rm("test.hex")
 test.hex <- as.h2o(test.dt,"test.hex")
-h2o.rm("valid.hex")
-validate.hex <- as.h2o(validate.dt,"valid.hex") ## when using a hold oud set for validation
+h2o.rm("validate.hex")
+validate.hex <- as.h2o(validate.dt,"validate.hex") ## when using a hold oud set for validation
 ###################################################################
 #### Set defaults                                              ####
 ###################################################################
 # Number of CV folds
 train <- h2o.getFrame("train.hex")
-test <- h2o.getFrame("valid.hex")
+test <- h2o.getFrame("validate.hex")
 nFolds <- 3
 ignoreConstCols = TRUE
 ###################################################################
@@ -51,7 +51,7 @@ rf <- h2o.randomForest(
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
             ignore_const_cols = ignoreConstCols,
-            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "deviance", 
+            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "RMSE", 
             model_id = "rf_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
@@ -81,7 +81,7 @@ gbm <- h2o.gbm(
             sample_rate = 1.0,                   ## sample 80% of rows per tree
             col_sample_rate = 1.0,               ## sample 80% of columns per split
             ignore_const_cols = ignoreConstCols,
-            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "deviance", 
+            stopping_rounds = 3, stopping_tolerance = 0.01, stopping_metric = "RMSE", 
             model_id = "gbm_housing_v1",         ## name the model in H2O
             seed = 333)                          ## Set the random seed for reproducability
 #### performance of the model
@@ -132,7 +132,29 @@ names(varImportance.df) <- c("variable","importance")
 varImportance.df$importance <- round(as.numeric(as.character(varImportance.df$importance)),3)
 featuresTop <-head(varImportance.df,50)
 ###################################################################
-#### Combine models in a stacked ensemble                      ####
+#### Alternative I :  combine models by averaging predictions  ####
+###################################################################
+#### Validation
+predictValidateMean          <- validate.hex[,c("Id","SalePrice")]
+predictValidateMean[,"rf"]   <- h2o.predict(object = rf,newdata = validate.hex)
+predictValidateMean[,"gbm"]  <- h2o.predict(object = gbm,newdata = validate.hex)
+predictValidateMean[,"glm"]  <- h2o.predict(object = glm,newdata = validate.hex)
+predictValidateMean[,"mean"] <- h2o.mean(x = predictValidateMean[,2:4], axis = 1, return_frame = TRUE)
+predictValidateMean[,"residual"] <- predictValidateMean[,"SalePrice"] - predictValidateMean[,"mean"]
+predictValidateMean[,"expMean"] <- h2o.exp(predictValidateMean[,"mean"]) 
+predictValidateMean[,"expSalePrice"] <- h2o.exp(predictValidateMean[,"SalePrice"]) 
+h2o.make_metrics(predicted = predictValidateMean[,"expMean"], actuals = predictValidateMean[,"expSalePrice"])
+#### Submission
+submissionMean               <- test.hex[,c("Id")]
+submissionMean[,"rf"]        <- h2o.predict(object = rf,newdata = test.hex)
+submissionMean[,"gbm"]       <- h2o.predict(object = gbm,newdata = test.hex)
+submissionMean[,"glm"]       <- h2o.predict(object = glm,newdata = test.hex)
+submissionMean[,"mean"]      <- h2o.mean(x = submissionMean[,2:4], axis = 1, return_frame = TRUE)
+submissionMean[,"SalePrice"] <- h2o.exp(submissionMean[,"mean"]) 
+submissionMean               <- submissionMean[,c("Id","SalePrice")]  
+h2o.exportFile(submissionMean, path = "/home/bart/submission.h2o.average.csv", force = T)
+###################################################################
+#### Alternative II : combine models in a stacked ensemble     ####
 ###################################################################
 ## Note: All base models must have the same cross-validation folds, fold assignments and
 ## the cross-validated predicted values must be kept.

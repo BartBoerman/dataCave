@@ -50,4 +50,3 @@ test.dt <- full.dt["test"]
 #Spliting training set into train and validate
 train.dt <- train.full.dt[index,]
 validate.dt <- train.full.dt[-index,]
-
