@@ -204,7 +204,7 @@ autoMl <- h2o.automl(
   y=response,                          ## the target index (what we are predicting)
   stopping_metric = "RMSLE",
   seed = 333,
-  max_runtime_secs = 300,
+  max_runtime_secs = (60*60*3),
   stopping_rounds = 3,
   stopping_tolerance = 0.001,
   project_name = "KaggleHousingPrices"
@@ -220,7 +220,7 @@ finalPredictions <- h2o.predict(
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "/home/bart/submission.h2o.ensembleGlm.csv", force = T)
+h2o.exportFile(submission, path = "/home/bart/submission.h2o.autoMl.csv", force = T)
 
 
 ###################################################################
