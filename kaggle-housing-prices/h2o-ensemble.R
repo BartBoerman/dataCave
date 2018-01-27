@@ -15,6 +15,7 @@
 #### Dependencies                                              ####
 ###################################################################
 require(h2o)        ## machine learning algorithmes
+require(Metrics)    ## rmsle
 h2o.connect(        ## connect to remote h2o cloud
   ip = "192.168.1.219",
   strict_version_check = FALSE, ## watch out here.
@@ -95,14 +96,14 @@ gbm@model$cross_validation_metrics_summary ## This gives you an idea of the vari
 #### Generalized Linear Model (GLM)                            ####
 ###################################################################
 glm <- h2o.glm(
-            training_frame =  train, 
+            training_frame =  train.hex, 
             nfolds = nFolds,
             fold_assignment = "Modulo", 
             keep_cross_validation_predictions = TRUE,
             x=features,                          ## the predictor columns, alternativaly by column index, e.g. 2:80
             y=response,                          ## what we are predicting,alternativaly, e.g. 81
-            family = "gaussian",
-            link = "identity",
+            family = "gamma",
+            link = "log",
             standardize = TRUE,  
             remove_collinear_columns = TRUE,
             ignore_const_cols = ignoreConstCols,
@@ -113,7 +114,7 @@ glm <- h2o.glm(
             model_id = "glm_housing_v1",
             seed = 333)
 #### performance of the model
-h2o.performance(glm, newdata = test)
+h2o.performance(glm, newdata = validate.hex)
 #### Extract specific metric
 h2o.rmsle(glm, train = T)
 #### Cross validation metrics
@@ -135,22 +136,24 @@ featuresTop <-head(varImportance.df,50)
 #### Alternative I :  combine models by averaging predictions  ####
 ###################################################################
 #### Validation
-predictValidateMean          <- validate.hex[,c("Id","SalePrice")]
-predictValidateMean[,"rf"]   <- h2o.predict(object = rf,newdata = validate.hex)
-predictValidateMean[,"gbm"]  <- h2o.predict(object = gbm,newdata = validate.hex)
-predictValidateMean[,"glm"]  <- h2o.predict(object = glm,newdata = validate.hex)
-predictValidateMean[,"mean"] <- h2o.mean(x = predictValidateMean[,2:4], axis = 1, return_frame = TRUE)
-predictValidateMean[,"residual"] <- predictValidateMean[,"SalePrice"] - predictValidateMean[,"mean"]
-predictValidateMean[,"expMean"] <- h2o.exp(predictValidateMean[,"mean"]) 
-predictValidateMean[,"expSalePrice"] <- h2o.exp(predictValidateMean[,"SalePrice"]) 
-h2o.make_metrics(predicted = predictValidateMean[,"expMean"], actuals = predictValidateMean[,"expSalePrice"])
+validate.dt$rf <- as.data.frame(h2o.predict(object = rf,newdata = validate.hex)) 
+validate.dt$gbm <- as.data.frame(h2o.predict(object = gbm,newdata = validate.hex)) 
+validate.dt$glm <- as.data.frame(h2o.predict(object = glm,newdata = validate.hex)) 
+validate.dt[, ':=' (
+  predicted = expm1((rf+gbm+glm) / 3),
+  SalePrice = expm1(SalePrice)
+)]
+validate.dt[, residual := SalePrice - predicted]
+rmsleValidate <- rmsle(actual = validate.dt$SalePrice, predicted =   validate.dt$predicted)  
+
+
 #### Submission
 submissionMean               <- test.hex[,c("Id")]
 submissionMean[,"rf"]        <- h2o.predict(object = rf,newdata = test.hex)
 submissionMean[,"gbm"]       <- h2o.predict(object = gbm,newdata = test.hex)
 submissionMean[,"glm"]       <- h2o.predict(object = glm,newdata = test.hex)
 submissionMean[,"mean"]      <- h2o.mean(x = submissionMean[,2:4], axis = 1, return_frame = TRUE)
-submissionMean[,"SalePrice"] <- h2o.exp(submissionMean[,"mean"]) 
+#### Download to R for 
 submissionMean               <- submissionMean[,c("Id","SalePrice")]  
 h2o.exportFile(submissionMean, path = "/home/bart/submission.h2o.average.csv", force = T)
 ###################################################################
@@ -188,10 +191,36 @@ finalPredictions <- h2o.predict(
                               object = ensemble
                               ,newdata = test.hex)
 names(finalPredictions) <- "SalePrice"
-finalPredictions$SalePrice <- h2o.exp(finalPredictions$SalePrice) 
+finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
-h2o.exportFile(submission, path = "/home/h2o/h2o/output/submission.h2o.ensembleGlm.csv", force = T)
+h2o.exportFile(submission, path = "/home/bart/submission.h2o.ensembleGlm.csv", force = T)
+###################################################################
+#### Automated machine learning                                ####
+###################################################################
+autoMl <- h2o.automl(
+  training_frame =  train.hex, 
+  validation_frame = validate.hex,    
+  x=features,                        ## the predictor columns, by column index
+  y=response,                          ## the target index (what we are predicting)
+  stopping_metric = "RMSLE",
+  seed = 333,
+  max_runtime_secs = 300,
+  stopping_rounds = 3,
+  stopping_tolerance = 0.001,
+  project_name = "KaggleHousingPrices"
+)
+autoMl@leaderboard ## Models evaluated bu h2o
+## Extract specific metric
+h2o.rmsle(autoMl@leader, train = T)
+h2o.rmsle(autoMl@leader, valid = T)
 
+finalPredictions <- h2o.predict(
+  object = autoMl@leader
+  ,newdata = test.hex)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
+submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
+h2o.exportFile(submission, path = "/home/bart/submission.h2o.ensembleGlm.csv", force = T)
 
 
 ###################################################################
