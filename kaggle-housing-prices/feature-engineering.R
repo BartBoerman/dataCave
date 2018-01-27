@@ -10,24 +10,24 @@ houseStyle.bin <- c("1Story" = "1Story",
                      "SFoyer" = "SFoyer",
                      "SLvl" = "SLvl") 
 full.dt[, ':=' (
-                sfTotal            = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
-                overallQualGood    = ifelse(as.integer(OverallQual) - 5 < 0, 0, as.integer(OverallQual) - 5),
-                OverallQualBad     = ifelse(5 - as.integer(OverallQual) < 0, 0, 5 - as.integer(OverallQual)),
+                isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0),
+                isNew       = ifelse(YrSold       == YearBuilt, 1, 0),
+                sfPorch = EnclosedPorch + ThreeSsnPorch + ScreenPorch,
+                sfTotal     = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
                 hasUnfinishedLevel= ifelse(HouseStyle %in% c("1.5Unf","2.5Unf"),1,0),
                 HouseStyle = as.factor(houseStyle.bin[HouseStyle]),
-                sfPorch = EnclosedPorch + ThreeSsnPorch + ScreenPorch,
-                countBathroomsAboveGr = FullBath + HalfBath,
-                isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0)
+                countBathrooms = FullBath + HalfBath + BsmtHalfBath + BsmtFullBath,
+                averageRoomSizeAbvGrd = GrLivArea / TotRmsAbvGrd,
+                bathRoomToRoomAbvGrd = (FullBath + HalfBath) / TotRmsAbvGrd,
+                landscapeInteraction = as.integer(LotShape) * as.integer(LandContour),
+                garageInteraction = GarageCars * as.integer(GarageQual)
 )]
 
 variablesDrop <- c(
-                  #### used in feature engineering
-                  "OverallQual","FirstFlrSF","SecondFlrSF", 
                   #### bad and constand
                   "BsmtFinSF2","WoodDeckSF","BsmtFinSF1","LowQualFinSF","PoolArea",
-                  "MasVnrArea","BsmtUnfSF", "MiscVal","EnclosedPorch","ThreeSsnPorch","ScreenPorch",
+                  "MasVnrArea","BsmtUnfSF", "MiscVal","EnclosedPorch","ThreeSsnPorch","ScreenPorch"
                   #### others
-                  "MoSold"
                   )
 
 variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop)) # ,"sfTotal"
@@ -52,6 +52,8 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartitio
 # full.dt[, ':=' (
 #                # BinOverallCond = as.integer(overallCond.bin[OverallCond]), 
 #                BinHouseStyle = as.factor(houseStyle.bin[HouseStyle]),
+#                overallQualGood    = ifelse(as.integer(OverallQual) - 5 < 0, 0, as.integer(OverallQual) - 5),
+#                OverallQualBad     = ifelse(5 - as.integer(OverallQual) < 0, 0, 5 - as.integer(OverallQual)),
 #                hasShed = ifelse(MiscFeature == "Shed",1,0),
 #                hasBsmtUnf = ifelse(BsmtUnfSF > 0,1,0),
 #                hasLowQualFin = ifelse(LowQualFinSF > 0,1,0),
