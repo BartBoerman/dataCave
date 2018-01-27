@@ -321,5 +321,63 @@ featuresBoruta <- getSelectedAttributes(boruta.final, withTentative = T)
 write.csv(featuresBoruta, file = "featuresBoruta.csv")
 
 
+###################################################################
+#### Impute with MICE                             ####
+###################################################################
+
+## https://www.analyticsvidhya.com/blog/2016/03/tutorial-powerful-packages-imputing-missing-values/
+## https://www.r-bloggers.com/imputing-missing-data-with-r-mice-package/
+require(mice)
+# Possible imputation models provided by mice() are
+methods(mice)
+#build predictive model
+tempData <- mice(train.dt,m=5,seed=333)
+fit <- with(tempData, lm(LotFrontage ~ LotArea)) 
+
+#combine results of all 5 models
+combine <- pool(fit)
+summary(combine)
+
+# If you need to check the imputation method used for each variable, mice makes it very easy to do
+
+tempData$meth
+
+# Now we can get back the completed dataset using the complete() function. It is almost plain English:
+
+completedData <- complete(tempData,1)
+
+
+###################################################################
+#### Impute with lm                                          ####
+###################################################################
+fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + Neighborhood + LotConfig + LandContour + MSZoning, data = full.dt[!is.na(LotFrontage),])
+
+
+tmp.dt <- copy(full.dt)
+tmp.dt[is.na(LotFrontage), LotFrontageImputed :=  round(expm1(predict(fit, newdata = tmp.dt[is.na(LotFrontage),])),0 )]
+
+x <- tmp.dt[, c("LotFrontage","LotFrontageImputed","LotArea","Neighborhood","LotConfig", "LandContour" ,"MSZoning")]
+View(x)
+
+tmp.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = tmp.dt[is.na(LotFrontage),])),0 )]
+
+hist(tmp.dt$LotFrontage)
+
+
+
+###################################################################
+#### find corraleted                                            ####
+###################################################################
+require(caret)
+
+tmp <- full.dt[, c(variablesSquareFootage), with = FALSE]
+corM <-cor(tmp)
+
+findCorrelation(x = corM, cutoff = 0.6, names = TRUE, exact = TRUE)
+
+
+
+
+
 
 

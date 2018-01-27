@@ -163,8 +163,6 @@ full.dt[is.na(BsmtFinSF1),':=' (BsmtFinSF1 = 0, BsmtFinSF2 = 0, BsmtUnfSF = 0, T
 full.dt[is.na(BsmtFullBath),':=' (BsmtFullBath = 0, BsmtHalfBath = 0)] 
 ## FireplaceQu  
 full.dt[is.na(FireplaceQu), FireplaceQu := "None"]
-## LotFrontage
-full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
 ## MSZoning
 ## RL for missing MSZoning in Mitchel because GrLivArea is greater then max of RM
 ## Not sure (yet) for missing MSZoning in IDOTRR. RM is most common in IDOTRR but might be wrong
@@ -192,3 +190,9 @@ full.dt[is.na(Utilities), Utilities := "AllPub"]
 full.dt[is.na(PoolQC), PoolQC := "None"]
 ## Fence
 full.dt[is.na(Fence), Fence := "None"]
+## LotFrontage
+## Alternative 1, impute by the median per neigborhood 
+# full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
+## Alternatove 2, impute with logistic regression
+fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + Neighborhood + LotConfig + LandContour + MSZoning, data = full.dt[!is.na(LotFrontage),])
+full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = full.dt[is.na(LotFrontage),])),0 )]
