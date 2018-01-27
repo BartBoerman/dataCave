@@ -1,3 +1,4 @@
+require(h2o)        ## machine learning algorithmes
 h2oDataCave <- h2o.init(
   ip = "localhost", 
   port = 54321,
