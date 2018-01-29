@@ -22,6 +22,21 @@ model_list <- caretList(
   trControl=my_control,
   methodList=c("svmRadial", "glm","xgbTree")
 )
+
+model_list <- caretList(
+            formula.all, 
+            data=train.dt,
+            trControl=my_control,
+            metric="RMSE",
+            methodList=c("rf", "glm"),
+            tuneList=list(
+              rf=caretModelSpec(method="rf", tuneLength=6), ## tuneGrid=data.frame(.mtry=2), preProcess="pca"
+              glm=caretModelSpec(method="glm", tuneLength=6)
+            )
+)
+
+
+
 ################################################### 
 ####  return to single threaded processing     #### 
 ###################################################
