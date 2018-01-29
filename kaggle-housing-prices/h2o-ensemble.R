@@ -202,11 +202,12 @@ autoMl <- h2o.automl(
   validation_frame = validate.hex,    
   x=features,                        ## the predictor columns, by column index
   y=response,                          ## the target index (what we are predicting)
-  stopping_metric = "RMSLE",
-  seed = 333,
+  nfolds = 3,
   max_runtime_secs = (60*60*3),
   stopping_rounds = 3,
   stopping_tolerance = 0.001,
+  stopping_metric = "RMSLE",
+  seed = 333,
   project_name = "KaggleHousingPrices"
 )
 autoMl@leaderboard ## Models evaluated bu h2o
