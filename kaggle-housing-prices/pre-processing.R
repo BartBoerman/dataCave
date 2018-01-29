@@ -46,7 +46,14 @@ features <- setdiff(names(full.dt), c(response, variablesDrop, "Id","dataPartiti
 ## split in train and test after engineering. Split by key is fasted method.
 train.full.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
-#Spliting training set into train and validate
-train.dt <- train.full.dt[index,]
-validate.dt <- train.full.dt[-index,]
+#Spliting training set into train and validate based on distribution
+#train.dt <- train.full.dt[index,]
+#validate.dt <- train.full.dt[-index,]
+## random split training into train and validate
+n <- nrow(train.full.dt)
+shuffled.dt <- train.full.dt[sample(n), ]
+train_indices <- 1:round(0.8 * n)
+train.dt <- shuffled.dt[train_indices, ]
+validate_indices <- (round(0.8 * n) + 1):n
+validate.dt <- shuffled.dt[validate_indices, ]
 
