@@ -142,7 +142,7 @@ findMode <- function(x) {
 }
 #### imputations
 ## Kitchen
-full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
+full.dt[is.na(KitchenQual), KitchenQual := findMode(full.dt$KitchenQual) ] ## One record, set to Typical
 ## Garage
 full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
                                                         GarageCars = 1,
@@ -199,5 +199,6 @@ full.dt[is.na(Fence), Fence := "None"]
 ## Alternative 1, impute by the median per neigborhood 
 # full.dt[, LotFrontage := replace(LotFrontage, is.na(LotFrontage), median(LotFrontage, na.rm=TRUE)), by=.(Neighborhood)]
 ## Alternatove 2, impute with logistic regression
-fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + Neighborhood + LotConfig + LandContour + MSZoning, data = full.dt[!is.na(LotFrontage),])
+fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + LotConfig, data = full.dt[!is.na(LotFrontage),])
 full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = full.dt[is.na(LotFrontage),])),0 )]
+
