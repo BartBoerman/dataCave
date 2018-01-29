@@ -136,15 +136,20 @@ zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
 ###################################################################
 #### Impute missing values                                     ####
 ###################################################################
+#### function to find the mode (class with highest frequancy, can be multiple).
+findMode <- function(x) {
+  names(table(x))[table(x)==max(table(x))]
+}
+#### imputations
 ## Kitchen
 full.dt[is.na(KitchenQual), KitchenQual := "TA" ] ## One record, set to Typical
 ## Garage
 full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
                                                         GarageCars = 1,
                                                         GarageArea = 360,
-                                                        GarageYrBlt = YearRemodAdd,
-                                                        GarageQual = "TA",
-                                                        GarageCond = "TA")] 
+                                                        GarageYrBlt = YearBuilt,
+                                                        GarageQual = findMode(full.dt$GarageQual),
+                                                        GarageCond = findMode(full.dt$GarageCond))] 
 full.dt[is.na(GarageFinish), GarageFinish := "None"]
 full.dt[is.na(GarageQual), GarageQual := "None"]
 full.dt[is.na(GarageCond), GarageCond := "None"]
@@ -170,22 +175,22 @@ full.dt[is.na(MSZoning) & Neighborhood == "Mitchel", MSZoning := "RL"]
 full.dt[is.na(MSZoning) & Neighborhood == "IDOTRR", MSZoning  := "RM"]
 ## Electrical
 ## Most common value for neighborhood Timber is SBrkr
-full.dt[is.na(Electrical) , Electrical  := "SBrkr"]
+full.dt[is.na(Electrical) , Electrical  := findMode(full.dt$Electrical)]
 ## Exterior
 ## Most common for neighborhood and large total square footage is "MetalSd"
 full.dt[is.na(Exterior1st),':=' (Exterior1st = "MetalSd",Exterior2nd = "MetalSd")]
 ## MasVnrType and MasVnrArea. Taking the easy way out here
 full.dt[is.na(MasVnrType),':=' (MasVnrType = "None", MasVnrArea = 0)]
 ## SaleType
-full.dt[is.na(SaleType), SaleType := "WD"]
+full.dt[is.na(SaleType), SaleType := findMode(full.dt$SaleType)]
 ## Functional
-full.dt[is.na(Functional), Functional := "Typ"]
+full.dt[is.na(Functional), Functional := findMode(full.dt$Functional)]
 ## MiscFeature
 full.dt[is.na(MiscFeature), MiscFeature := "None"]
 ## Alley
 full.dt[is.na(Alley), Alley := "None"]
 ## Utilities
-full.dt[is.na(Utilities), Utilities := "AllPub"]
+full.dt[is.na(Utilities), Utilities := findMode(full.dt$Utilities)]
 ## PoolQC
 full.dt[is.na(PoolQC), PoolQC := "None"]
 ## Fence
