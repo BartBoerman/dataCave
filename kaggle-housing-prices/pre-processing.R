@@ -39,7 +39,7 @@ full.dt[, (varScale) := lapply(.SD, function(x) scale(x, center = T, scale = T))
 ###################################################################
 #### Select features                                           ####
 ###################################################################
-features <- setdiff(names(full.dt), c(response,variablesDrop, "Id","dataPartition")) 
+features <- setdiff(names(full.dt), c(response, variablesDrop, "Id","dataPartition")) 
 ###################################################################
 #### Split data                                                ####
 ###################################################################

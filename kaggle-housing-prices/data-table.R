@@ -207,3 +207,5 @@ full.dt[is.na(Fence), Fence := "None"]
 ## Alternatove 2, impute with logistic regression
 fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + LotConfig, data = full.dt[!is.na(LotFrontage),])
 full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = full.dt[is.na(LotFrontage),])),0 )]
+variablesDrop <- NA
+response <- "SalePrice"
