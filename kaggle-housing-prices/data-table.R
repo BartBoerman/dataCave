@@ -107,6 +107,12 @@ variablesFactor <- c(variablesFactor,
 ###################################################################
 full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
 full.dt[MSSubClass  == 150, MSSubClass:= 160] ## 150 not in training set
+full.dt[Exterior1st  == "Wd Sdng", Exterior1st:= "WdSdng"] ## Fix spaces
+full.dt[Exterior2nd  == "Wd Sdng", Exterior2nd:= "WdSdng"] ## Fix spaces
+full.dt[Exterior2nd  == "Brk Cmn", Exterior2nd:= "BrkComm"] ## Fix typo
+full.dt[Exterior2nd  == "Wd Shng", Exterior2nd:= "WdShing"] ## Fix typo
+full.dt[RoofMatl  == "Tar&Grv", RoofMatl:= "TarGrv"] ## Fix '&'
+full.dt[RoofMatl  == "WdShngl", RoofMatl:= "WdShing"] ## See exterior
 ###################################################################
 #### Data engineering                                          ####
 ###################################################################
@@ -178,7 +184,7 @@ full.dt[is.na(MSZoning) & Neighborhood == "IDOTRR", MSZoning  := "RM"]
 full.dt[is.na(Electrical) , Electrical  := findMode(full.dt$Electrical)]
 ## Exterior
 ## Most common for neighborhood and large total square footage is "MetalSd"
-full.dt[is.na(Exterior1st),':=' (Exterior1st = "MetalSd",Exterior2nd = "MetalSd")]
+full.dt[is.na(Exterior1st),':=' (Exterior1st = findMode(full.dt$Exterior1st),Exterior2nd = findMode(full.dt$Exterior2nd))]
 ## MasVnrType and MasVnrArea. Taking the easy way out here
 full.dt[is.na(MasVnrType),':=' (MasVnrType = "None", MasVnrArea = 0)]
 ## SaleType
@@ -201,4 +207,3 @@ full.dt[is.na(Fence), Fence := "None"]
 ## Alternatove 2, impute with logistic regression
 fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + LotConfig, data = full.dt[!is.na(LotFrontage),])
 full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = full.dt[is.na(LotFrontage),])),0 )]
-
