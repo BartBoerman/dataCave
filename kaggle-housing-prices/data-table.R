@@ -136,7 +136,7 @@ zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
 ###################################################################
 #### Impute missing values                                     ####
 ###################################################################
-#### function to find the mode (class with highest frequancy, can be multiple).
+#### function to find the mode.
 findMode <- function(x) {
   names(table(x))[table(x)==max(table(x))]
 }
