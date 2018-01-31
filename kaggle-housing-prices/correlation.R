@@ -1,11 +1,16 @@
 ###################################################################
 #### correlation                                               ####
 ###################################################################
-## porchTotalSF, totalSF are based on these variables, let's remove them
-removeVariables <- c("OpenPorchSF","EnclosedPorch","ThreeSsnPorch","ScreenPorch","TotalBsmtSF","FirstFlrSF","SecondFlrSF")
-full.dt[, (removeVariables):=NULL] 
-variablesSquareFootage <- setdiff(c(variablesSquareFootage), c(removeVariables))
-## corralation matrix
-corMatrix = cor(full.dt[dataPartition == "train",..variablesSquareFootage])
-highlyCorrelated = findCorrelation(corMatrix, cutoff=0.8, names = T, exact = T)
-# Oeps, thats the just created feature.
+## https://stackoverflow.com/questions/46308308/find-the-pair-of-most-correlated-variables
+#### corralation matrix
+variablesNumeric <- sapply(full.dt,is.numeric) ## contains also integers
+corrData <- full.dt[dataPartition == "train", ..variablesNumeric ]
+corMatrix = cor(corrData)
+#### table with highly correlated values
+corTable <- setDT(melt(corMatrix))[order(-value)][value!=1] 
+corTableSalePrice <- corTable[Var1=="SalePrice",][order(-value)]
+corTableHigh <- corTable[value > 0.8][order(Var1,-value)]
+
+#variablesOrdered <- sapply(full.dt,is.ordered) ## ordered factors
+#variablesFactor <- sapply(full.dt,is.factor)  ## contains also ordered factors
+
