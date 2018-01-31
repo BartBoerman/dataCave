@@ -15,15 +15,20 @@ my_control <- trainControl(
   allowParallel =TRUE
 )
 
-features.back  <- features
+features <- setdiff(names(full.dt), c(response, variablesDrop, "Id","dataPartition")) 
 #### Remove correlated 
 features <- setdiff(features, c(
 "GarageCond",    ## correlated with GarageQual
 "GarageYrBlt",   ## correlated with GarageQual
 "GarageArea",    ## correlated with GarageCars
-"TotRmsAbvGrd",  ## correlated with GrLivArea
-"YearRemodAdd", 
-"FirstFlrSF"
+"TotRmsAbvGrd" #,  ## correlated with GrLivArea
+#"YearRemodAdd", 
+#"FirstFlrSF",
+####
+# TotalBsmtSF  with 	BsmtCond BsmtQual
+# BsmtFinSF1 with 	BsmtFinType1
+
+
 ))
 
 formula.all <- as.formula(paste("SalePrice ~ ", paste(features, collapse= "+"))) 
