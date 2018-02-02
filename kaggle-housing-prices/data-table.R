@@ -139,6 +139,8 @@ print(countIsNA.df)
 ## zero variance
 zeroVarianceVariables.df <- nearZeroVar(full.dt, names = T, saveMetrics = T,
                                         foreach = T, allowParallel = T)
+variablesZeroVariance <- nearZeroVar(full.dt, names = T, saveMetrics = F,
+                                     foreach = T, allowParallel = T)
 ###################################################################
 #### Impute missing values                                     ####
 ###################################################################

@@ -8,43 +8,49 @@ cluster <- makeCluster(detectCores())  # leave one for OS
 registerDoParallel(cluster)
 ## https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html
 my_control <- trainControl(
-  method="cv",
-  number=7,
-  savePredictions="final",
-#  index=createResample(train.dt$OverallQual, 7),  
-  allowParallel =TRUE
+        method="cv",
+        number=7,
+        savePredictions="final",
+        index=createResample(train.dt$OverallQual, 7),  
+        #repeats = 1,
+        allowParallel =TRUE
 )
 
+#### Select features
 features <- setdiff(names(full.dt), c(response, variablesDrop, "Id","dataPartition")) 
 #### Remove correlated 
 features <- setdiff(features, c(
-"GarageCond",    ## correlated with GarageQual
-"GarageYrBlt",   ## correlated with GarageQual
-"GarageArea",    ## correlated with GarageCars
-"TotRmsAbvGrd" #,  ## correlated with GrLivArea
-#"YearRemodAdd", 
-#"FirstFlrSF",
-####
-# TotalBsmtSF  with 	BsmtCond BsmtQual
-# BsmtFinSF1 with 	BsmtFinType1
-
-
+  "GarageCond",     ## high correlation with GarageQual
+  "GarageYrBlt",    ## high correlation with GarageQual
+  "GarageArea",     ## high correlation GarageCars
+  "TotRmsAbvGrd" ,  ## high correlation GrLivArea
+  "YearRemodAdd",   ## correlated with qualities and age 
+  "TotalBsmtSF",      ## correlated	with BsmtCond BsmtQual
+  "BsmtFinSF1"       ## correlated with 	BsmtFinType1
 ))
+
+#### Remove zero variance 
+#variablesZeroVariance <- nearZeroVar(train.dt, freqCut = 95/5, uniqueCut = 10, saveMetrics = FALSE,
+#                                     names = TRUE, foreach = FALSE, allowParallel = TRUE)
+#features <- setdiff(features, variablesZeroVariance)
 
 formula.all <- as.formula(paste("SalePrice ~ ", paste(features, collapse= "+"))) 
 
 ###################################################################
 
-require(randomForest)
-#require(xgboost)
+#require(randomForest)
+require(xgboost)
 require(glmnet)
 # require(gbm)
 #library(kernlab)       # support vector machine 
-#require(elasticnet)  # ridge regressing
+# require(elasticnet)  ## enet
+# require(extraTrees)  ## extraTrees
+# require(e1071)  ## parRF
 glmnetGridElastic <- expand.grid(.alpha = 0.3, .lambda = 0.009) ## notice the . before the parameter
 glmnetGridLasso <- expand.grid(.alpha = 1, .lambda = seq(0.001,0.1,by = 0.001))
 glmnetGridRidge <- expand.grid(.alpha = 0, .lambda = seq(0.001,0.1,by = 0.001))
-rfGrid <- expand.grid(.mtry = seq(35,65,by = 5))
+xgbTreeGrid <- expand.grid(nrounds = 400, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1.0,  subsample = 1.0, min_child_weight = 4)
+#rfGrid <- expand.grid(.mtry = seq(35,65,by = 5))
 set.seed(333)
 model_list <- caretList(
                   formula.all, 
@@ -53,17 +59,43 @@ model_list <- caretList(
                   metric="RMSE",
                   tuneList=list(
                           ## Do not use custom names in list. This will give prediction error with greedy ensemble. Bug in caret.
-                          # rf=caretModelSpec(method="rf", .mtry = 57), ## , tuneGrid=data.frame(.mtry=2), preProcess="pca"
+                          xgbTree = caretModelSpec(method="xgbTree",  tuneGrid = xgbTreeGrid, nthread = 8),
+                          #lm =   caretModelSpec(method="lm"),
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridElastic), ## Elastic  , tuneLength = 6
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridLasso), ## Lasso
-                          glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridRidge), ## Lasso
-                          rf = caretModelSpec(method="rf",  tuneGrid = rfGrid)
+                          glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridRidge) ## Lasso
+                          
                           )
 )
 ####
 xyplot(resamples(model_list))
 modelCor(resamples(model_list))
 summary(resamples(model_list))
+varImp(model_list$xgbTree)
+varImp(model_list$glmnet)
+
+
+#### residual analysis
+plot(train.dt$Neighborhood, resid(model_list$glmnet), 
+       ylab="Residuals", xlab="Neigborhood", 
+       main="Old Faithful Eruptions") 
+       abline(0, 0)                  ## the horizon
+
+## http://www.r-tutor.com/elementary-statistics/simple-linear-regression/normal-probability-plot-residuals
+## http://data.library.virginia.edu/understanding-q-q-plots/
+## https://stats.stackexchange.com/questions/117873/how-to-detect-outliers-from-residual-plot
+## https://www.statmethods.net/stats/rdiagnostics.html
+       
+       
+qqnorm(resid(model_list$glmnet), 
+                ylab="Standardized Residuals", 
+                xlab="Normal Scores", 
+                main="Q-Q plot residuals") 
+       qqline(resid(model_list$glmnet))
+
+
+       
+              
 ####
 greedy_ensemble <- caretEnsemble(
   model_list, 
@@ -76,6 +108,9 @@ summary(greedy_ensemble)
 #### 
 require(Metrics)
 rmse(log(expm1(validate.dt$SalePrice)), log(expm1(predict(greedy_ensemble, newdata=validate.dt))))
+
+
+
 
 #### submit
 finalPredictions <- predict(greedy_ensemble, newdata=test.dt)
@@ -116,8 +151,12 @@ rmse(log(expm1(validate.dt$SalePrice)), log(expm1(predict(xgboostFit, validate.x
 rmsle(expm1(validate.dt$SalePrice), expm1(predict(xgboostFit, validate.xgb.DMatrix)))
 
 
-importance_matrix <- xgb.importance(model = xgboostFit,
-                                    feature_names = names(train.dt[,1:80]))
+importance_matrix <- xgb.importance(model = xgboostTreeBooster,
+                                    feature_names = names(train.dt[,2:80]))
+
+
+
+
 print(importance_matrix)
 xgb.plot.importance(importance_matrix = importance_matrix,top_n = 20)
 

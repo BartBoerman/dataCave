@@ -20,17 +20,13 @@ full.dt[, ':=' (
                 averageRoomSizeAbvGrd = GrLivArea / TotRmsAbvGrd,
                 bathRoomToRoomAbvGrd = (FullBath + HalfBath) / TotRmsAbvGrd,
                 landscapeInteraction = as.integer(LotShape) * as.integer(LandContour),
-                garageInteraction = GarageCars * as.integer(GarageQual)
+                garageInteraction = GarageCars * as.integer(GarageQual),
+                yrMoSoldInt = as.numeric(format(as.Date(paste(YrSold, MoSold, "1", sep="-")), '%Y%m')) 
 )]
 
-variablesDrop <- c(
-                  #### bad and constand
-                  "BsmtFinSF2","WoodDeckSF","BsmtFinSF1","LowQualFinSF","PoolArea",
-                  "MasVnrArea","BsmtUnfSF", "MiscVal","EnclosedPorch","ThreeSsnPorch","ScreenPorch"
-                  #### others
-                  )
+variablesDrop <- c("MoSold")
 
-variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop)) # ,"sfTotal"
+variablesSquareFootage <- c(setdiff(variablesSquareFootage, variablesDrop)) 
 variablesValues <- setdiff(variablesValues, variablesDrop)
 variablesFactor <- setdiff(variablesFactor, variablesDrop)
 ordinalFactors <- setdiff(ordinalFactors, variablesDrop)

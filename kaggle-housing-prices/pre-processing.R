@@ -17,11 +17,11 @@ setkey(full.dt,dataPartition)
 train.full.dt <- full.dt["train"]
 index <- createDataPartition(train.full.dt$YrSold, p=0.80, list=FALSE)
 #### remove unwanted variables
-full.dt[, (variablesDrop):=NULL]
-full.dt[, (variablesFactor):=NULL]
+#full.dt[, (variablesDrop):=NULL]
+#full.dt[, (variablesFactor):=NULL]
 ##### ordinal factors
-## convert ordinal factors to integers. h2o does not support ordered factors.
-changeColType <- ordinalFactors
+## convert ordinal factors to integers. h2o does not support ordered factors, in addition, it gives a small performance boost for glmnet and xgbTree.
+changeColType <- setDT(data.frame(sapply(full.dt,is.ordered)), keep.rownames = TRUE)[sapply.full.dt..is.ordered.==TRUE]$rn
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 #### remove variables with zero variance
 #### skewed variables
@@ -50,6 +50,7 @@ test.dt <- full.dt["test"]
 #train.dt <- train.full.dt[index,]
 #validate.dt <- train.full.dt[-index,]
 ## random split training into train and validate
+set.seed(333)
 n <- nrow(train.full.dt)
 shuffled.dt <- train.full.dt[sample(n), ]
 train_indices <- 1:round(0.8 * n)
