@@ -66,13 +66,16 @@ In addition I want to gain and share some basic knowledge of data wrangling and 
 # Required libraries
 
 ```{r setup, message=FALSE, warning=FALSE}
-require(knitr)      ## dynamic report generation in R
-require(DT)         ## display data in html tables
-require(ggplot2)    ## plotting 
-require(gridExtra)  ## Arrange visualizations using grid 
-require(data.table) ## fast data wrangling and analysis
-require(psych)      ## descriptive statistics, skewness and kurtosis
-require(caret)      ## (near) zero variance, train and predict
+require(knitr)              ## dynamic report generation in R
+require(DT)                 ## display data in html tables
+require(ggplot2)            ## plotting 
+require(gridExtra)          ## Arrange visualizations using grid 
+require(data.table)         ## fast data wrangling and analysis
+require(psych)              ## descriptive statistics, skewness and kurtosis
+require(caret)              ## (near) zero variance, train and predict
+require(caretEnsemble)      ## ensemble modelling
+require(xgboost)
+require(glmnet)
 knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE) ## some defaults for this report
 ```
 
@@ -107,6 +110,7 @@ test.dt[, SalePrice:=as.integer(NA)]
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 ```
+
 
 # Data understanding
 
@@ -172,6 +176,21 @@ R does not support numbers as first character of variable names. Some variables 
 setnames(full.dt, c("X1stFlrSF","X2ndFlrSF","X3SsnPorch"), c("FirstFlrSF","SecondFlrSF","ThreeSsnPorch"))
 ```
 
+Before we go further we need to do some housekeeping on the data, like fixing typo's or spaces/& in categories (factor levels). 
+
+```{r}
+full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
+full.dt[MSSubClass  == 150, MSSubClass:= 160] ## 150 not in training set
+full.dt[Exterior1st  == "Wd Sdng", Exterior1st:= "WdSdng"] ## Fix spaces
+full.dt[Exterior2nd  == "Wd Sdng", Exterior2nd:= "WdSdng"] ## Fix spaces
+full.dt[Exterior2nd  == "Brk Cmn", Exterior2nd:= "BrkComm"] ## Fix typo
+full.dt[Exterior2nd  == "Wd Shng", Exterior2nd:= "WdShing"] ## Fix typo
+full.dt[RoofMatl  == "Tar&Grv", RoofMatl:= "TarGrv"] ## Fix '&'
+full.dt[RoofMatl  == "WdShngl", RoofMatl:= "WdShing"] ## See exterior
+```
+
+Imputation of missing values is part of the data cleansing process. We will do this task after analyzing descriptive statistics. 
+
 Since categorical variables enter into statistical models differently than continuous variables, storing data as factors insures that the modeling functions will treat such data correctly.
 
 ```{r}
@@ -223,22 +242,7 @@ full.dt[,PoolQC:=ordered(PoolQC, levels = c("None","Fa","Gd","Ex"))]
 
 Descriptive statistics describe quantitatively the basic features of the data. These statistics will give us a head start by providing information about stuff like skewness, outliers (range) missing data points and (near) zero variance.
 
-# Data cleansing
-
-Before we go further we need to do some housekeeping on the data, like fixing typo's or spaces/& in categories (factor levels). 
-
-```{r}
-full.dt[GarageYrBlt == 2207, GarageYrBlt:= 2007] ## Fix typo
-full.dt[MSSubClass  == 150, MSSubClass:= 160] ## 150 not in training set
-full.dt[Exterior1st  == "Wd Sdng", Exterior1st:= "WdSdng"] ## Fix spaces
-full.dt[Exterior2nd  == "Wd Sdng", Exterior2nd:= "WdSdng"] ## Fix spaces
-full.dt[Exterior2nd  == "Brk Cmn", Exterior2nd:= "BrkComm"] ## Fix typo
-full.dt[Exterior2nd  == "Wd Shng", Exterior2nd:= "WdShing"] ## Fix typo
-full.dt[RoofMatl  == "Tar&Grv", RoofMatl:= "TarGrv"] ## Fix '&'
-full.dt[RoofMatl  == "WdShngl", RoofMatl:= "WdShing"] ## See exterior
-```
-
-Imputation of missing values is part of the data cleansing process. 
+# Impute missing values
 
 ```{r}
 #### function to find the mode.
@@ -308,8 +312,204 @@ fit <- lm(log1p(LotFrontage) ~ log1p(LotArea) + LotConfig, data = full.dt[!is.na
 full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = full.dt[is.na(LotFrontage),])),0 )]
 ```
 
+# Visualize key aspects of data
 
+To be included later.
 
+# Correlation
+
+```{r}
+variablesNumeric <- sapply(full.dt,is.numeric) ## both numeric integers
+corrData <- full.dt[dataPartition == "train", ..variablesNumeric ]
+corMatrix = cor(corrData)
+#### table with highly correlated values
+corTable <- setDT(melt(corMatrix))[order(-value)][value!=1] 
+corTableSalePrice <- corTable[Var1=="SalePrice",][order(-value)]
+corTableHigh <- corTable[value > 0.8 | value < -0.80 ][order(Var1,-value)]
+```
+
+```{r}
+variablesHighlyCorrelated <- c(
+  "GarageCond",     ## high correlation with GarageQual
+  "GarageYrBlt",    ## high correlation with GarageQual
+  "GarageArea",     ## high correlation GarageCars
+  "TotRmsAbvGrd" ,  ## high correlation GrLivArea
+  "YearRemodAdd",   ## correlated with qualities and age 
+  "TotalBsmtSF",      ## correlated	with BsmtCond BsmtQual
+  "BsmtFinSF1"       ## correlated with 	BsmtFinType1
+)
+```
+
+# Feature engineering
+
+```{r}
+houseStyle.bin <- c("1Story" = "1Story", 
+                     "1.5Fin" = "1.5Story", 
+                     "1.5Unf" = "1.5Story",
+                     "2.5Unf" = "2.5Story",
+                     "2.5Fin" = "2.5Story",
+                     "2Story" = "2Story",
+                     "SFoyer" = "SFoyer",
+                     "SLvl" = "SLvl") 
+full.dt[, ':=' (
+                age = YrSold - YearRemodAdd,
+                isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0),
+                isNew       = ifelse(YrSold       == YearBuilt, 1, 0),
+                overallQualGood    = ifelse(as.integer(OverallQual) - 5 < 0, 0, as.integer(OverallQual) - 5),
+                overallQualBad     = ifelse(5 - as.integer(OverallQual) < 0, 0, 5 - as.integer(OverallQual)),
+                sfPorch = EnclosedPorch + ThreeSsnPorch + ScreenPorch,
+                sfTotal     = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
+                hasUnfinishedLevel= ifelse(HouseStyle %in% c("1.5Unf","2.5Unf"),1,0),
+                HouseStyle = as.factor(houseStyle.bin[HouseStyle]),
+                countBathrooms = FullBath + HalfBath + BsmtHalfBath + BsmtFullBath,
+                averageRoomSizeAbvGrd = GrLivArea / TotRmsAbvGrd,
+                bathRoomToRoomAbvGrd = (FullBath + HalfBath) / TotRmsAbvGrd,
+                landscapeInteraction = as.integer(LotShape) * as.integer(LandContour),
+                garageInteraction = GarageCars * as.integer(GarageQual),
+                yrMoSoldInt = as.numeric(format(as.Date(paste(YrSold, MoSold, "1", sep="-")), '%Y%m')) 
+)]
+
+```
+
+# Data preparation
+
+```{r}
+#### select features
+variablesDrop <- NA
+response <- "SalePrice"  
+features <- setdiff(names(full.dt), c(response,variablesDrop, variablesHighlyCorrelated, "Id","dataPartition"))
+```
+
+```{r}
+##### remove outliers
+outliersHigh.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200,Id]
+full.dt <- full.dt[!(Id %in% outliersHigh.Id)]
+```
+
+```{r}
+#### create index for to split full data set into train and test
+setkey(full.dt,dataPartition)
+train.full.dt <- full.dt["train"]
+```
+
+```{r}
+#### ordinal factors
+## convert ordinal factors to integers. It gives a small performance boost for glmnet and xgbTree.
+changeColType <- setDT(data.frame(sapply(full.dt,is.ordered)), keep.rownames = TRUE)[sapply.full.dt..is.ordered.==TRUE]$rn
+full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
+```
+
+```{r}
+#### skewed variables
+## log transform skewed variables (including response variable)
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
+## keep only features that exceed a threshold for skewness
+skewedVariables <- skewedVariables[skewedVariables > 0.50]
+## transform excessively skewed features with log
+skewedVariables <- names(skewedVariables)
+full.dt[, (skewedVariables) := lapply(.SD, function(x) log1p(x)), .SDcols = skewedVariables]
+```
+
+```{r}
+#### scale
+varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## Do not scale response
+full.dt[, (varScale) := lapply(.SD, function(x) scale(x, center = T, scale = T)), .SDcols = varScale]
+```
+
+```{r}
+## split in train and test after engineering. Split by key is fasted method.
+train.full.dt <- full.dt["train"]
+test.dt <- full.dt["test"]
+## random split training into train and validate
+set.seed(333)
+n <- nrow(train.full.dt)
+shuffled.dt <- train.full.dt[sample(n), ]
+train_indices <- 1:round(0.8 * n)
+train.dt <- shuffled.dt[train_indices, ]
+validate_indices <- (round(0.8 * n) + 1):n
+validate.dt <- shuffled.dt[validate_indices, ]
+```
+
+# Modeling
+
+```{r}
+formula.all <- as.formula(paste("SalePrice ~ ", paste(features, collapse= "+")))
+trControl <- trainControl(
+        method="cv",
+        number=7,
+        savePredictions="final",
+        index=createResample(train.dt$OverallQual, 7),  
+        allowParallel =TRUE
+)
+glmnetGridElastic <- expand.grid(.alpha = 0.3, .lambda = 0.009) ## notice the . before the parameter
+glmnetGridLasso <- expand.grid(.alpha = 1, .lambda = seq(0.001,0.1,by = 0.001))
+glmnetGridRidge <- expand.grid(.alpha = 0, .lambda = seq(0.001,0.1,by = 0.001))
+xgbTreeGrid <- expand.grid(nrounds = 400, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1.0,  subsample = 1.0, min_child_weight = 4)
+set.seed(333)
+modelList <- caretList(
+                  formula.all, 
+                  data=train.dt,
+                  trControl=trControl,
+                  metric="RMSE",
+                  tuneList=list(
+                  ## Do not use custom names in list. Will give prediction error with greedy ensemble. Bug in caret.
+                          xgbTree = caretModelSpec(method="xgbTree",  tuneGrid = xgbTreeGrid, nthread = 8),
+                          lm =   caretModelSpec(method="lm"),
+                          glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridElastic), ## Elastic 
+                          glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridLasso), ## Lasso
+                          glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridRidge) ## Ridge
+                          )
+)
+```
+
+# Evaluation
+
+```{r}
+xyplot(resamples(modelList))
+modelCor(resamples(modelList))
+summary(resamples(modelList))
+varImp(modelList$xgbTree)
+varImp(modelList$glmnet)
+```
+
+```{r}
+#### residual analysis
+plot(train.dt$OverallQual, resid(modelList$glmnet), 
+       ylab="Residuals", xlab="Neigborhood", 
+       main="") 
+       abline(0, 0)                  
+     
+qqnorm(resid(modelList$glmnet), 
+                ylab="Standardized Residuals", 
+                xlab="Normal Scores", 
+                main="Q-Q plot residuals") 
+       qqline(resid(modelList$glmnet))
+```
+
+# Ensemble
+
+```{r}
+set.seed(333)
+greedyEnsemble <- caretEnsemble(
+  modelList, 
+  metric="RMSE",
+  trControl=trainControl(
+    number=7, method = "cv"
+  ))
+
+summary(greedyEnsemble)
+```
+# Predict and submit results
+
+```{r}
+#### submit
+finalPredictions <- predict(greedyEnsemble, newdata=test.dt)
+finalPredictions <- data.frame(finalPredictions)
+names(finalPredictions) <- "SalePrice"
+finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
+submission <- cbind(test.dt[, "Id"],finalPredictions)
+write.csv(x = submission, file = "submission.csv", row.names = F)
+```
 
 
 
