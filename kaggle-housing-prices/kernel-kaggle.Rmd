@@ -51,7 +51,6 @@ th.sorting { /* DT column headers  */
     text-align: left;
 }
 </style>
-**Raw inital version**.
 
 # Introduction
 
@@ -69,8 +68,10 @@ In addition I want to gain and share some basic knowledge of data wrangling and 
 require(knitr)              ## dynamic report generation in R
 require(DT)                 ## display data in html tables
 require(ggplot2)            ## plotting 
-require(gridExtra)          ## Arrange visualizations using grid 
+require(gridExtra)          ## arrange visualizations using grid 
+require(dplyr)              ## easy data wrangling on small data frames
 require(data.table)         ## fast data wrangling and analysis
+require(funModeling)        ## table with counts on missing values. Do not load before psych or caret. It will mask some stuff.
 require(psych)              ## descriptive statistics, skewness and kurtosis
 require(caret)              ## (near) zero variance, train and predict
 require(caretEnsemble)      ## ensemble modelling
@@ -110,7 +111,6 @@ test.dt[, SalePrice:=as.integer(NA)]
 test.dt[, dataPartition:="test"]
 full.dt <- rbindlist(list(train.dt, test.dt), use.names = F, fill = F)
 ```
-
 
 # Data understanding
 
@@ -242,6 +242,43 @@ full.dt[,PoolQC:=ordered(PoolQC, levels = c("None","Fa","Gd","Ex"))]
 
 Descriptive statistics describe quantitatively the basic features of the data. These statistics will give us a head start by providing information about stuff like skewness, outliers (range) missing data points and (near) zero variance.
 
+## Table with basic statistics
+The table below is calculated with the psych package.
+
+```{r}
+descStats <- describe(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE]) 
+datatable(round(descStats,2), rownames = T,
+          caption = "Descriptive statistics", 
+          options = list(pageLength = 8)) ## Interactive HTML table
+```
+
+## Table with missing values or numerical values with zero's
+
+The table below provides counts on unknown (a.k.a. missing or numerical zero) values per variable. Please note that missing values are often legitimate. For example when a dwelling does not have a garage no value is provided in the corresponding variables. We will impute them with “None” or a zero further down this analysis.
+
+```{r}
+require(funModeling)        ## table with counts on missing values
+descMissing <- df_status(full.dt, print_results = FALSE) 
+datatable(descMissing[(descMissing$q_zeros > 0 & descMissing$type == "numeric") |
+                        (descMissing$q_na > 0 & descMissing$type != "numeric"),], rownames = T,
+          caption = "Missing values or zero's", 
+          options = list(pageLength = 8)) ## Interactive HTML table
+```
+
+## Table about variables with (near) zero variance
+
+Variables with zero variance are mostly constant across the data set, hence might provide little information and potentially cause overfitting. The table is generated on the training data with help of the caret package.
+
+```{r}
+zeroVarianceVariables.df <- nearZeroVar(train.dt, names = T, saveMetrics = T,
+                                        foreach = T, allowParallel = T)
+datatable(round(subset(zeroVarianceVariables.df, nzv == TRUE, 
+                       select =     c("freqRatio","percentUnique")),2), 
+          rownames = T,
+          caption = "Variables with (near) zero variance", 
+          options = list(pageLength = 8))
+```
+
 # Impute missing values
 
 ```{r}
@@ -314,30 +351,84 @@ full.dt[is.na(LotFrontage), LotFrontage :=  round(expm1(predict(fit, newdata = f
 
 # Visualize key aspects of data
 
-To be included later.
-
-# Correlation
-
 ```{r}
-variablesNumeric <- sapply(full.dt,is.numeric) ## both numeric integers
-corrData <- full.dt[dataPartition == "train", ..variablesNumeric ]
-corMatrix = cor(corrData)
-#### table with highly correlated values
-corTable <- setDT(melt(corMatrix))[order(-value)][value!=1] 
-corTableSalePrice <- corTable[Var1=="SalePrice",][order(-value)]
-corTableHigh <- corTable[value > 0.8 | value < -0.80 ][order(Var1,-value)]
+ggplot(train.dt, aes(GrLivArea,SalePrice)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        geom_smooth(method=lm,     ## Add linear regression line 
+                    se=FALSE) +    ## Don't add shaded confidence region
+        ggtitle("Sale price versus above grade (ground) living area") + 
+        xlab("above grade living area") +
+        ylab("sale price") +
+        theme(text = element_text(size=9))
 ```
 
 ```{r}
+ggplot(train.dt, aes(GrLivArea,LotArea)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        geom_smooth(method=lm,     ## Add linear regression line 
+                    se=FALSE) +    ## Don't add shaded confidence region
+        ggtitle("Lot area versus above grade (ground) living area") + 
+        xlab("lot area") +
+        ylab("sale price") +
+        theme(text = element_text(size=9)) 
+```
+
+```{r}
+ggplot(train.dt, aes(as.factor(Neighborhood),SalePrice)) +
+        geom_boxplot(varwidth = TRUE, fill = "white", colour = "#3366FF", outlier.colour = "red", outlier.shape = 1) +
+        ggtitle("Boxplot sale price per neighborhood") + 
+        xlab("neighborhood") +
+        ylab("sale price") +
+        theme(text = element_text(size=9)) +   
+        coord_flip()
+```
+
+
+```{r}
+ggplot(train.dt, aes(OverallQual,SalePrice)) +
+        geom_point(shape=1) +      ## Use hollow circles
+        geom_smooth(method=lm,     ## Add linear regression line 
+                    se=FALSE) +    ## Don't add shaded confidence region
+        ggtitle("Sale price per overall quality") + 
+        xlab("overall quality") +
+        ylab("sale price") +
+        theme(text = element_text(size=9)) 
+```
+
+# Correlation
+
+High multicollinearity potentially increase the variance of the coefficient estimates and makes the estimates sensitive to minor changes in the model. The result is that the model becomes unstable. It does not affect the fit of the model or the quality of the predictions. 
+
+```{r fig.width=14, fig.height=14}
+require(corrplot)
+## calculate correlation matrix
+variablesNumeric <- sapply(full.dt,is.numeric) ## both numeric integers
+corrData <- full.dt[dataPartition == "train", ..variablesNumeric ]
+corMatrix = cor(corrData)
+## plot correlation
+corrplot(corMatrix,
+            title = "",
+            type = "lower", 
+            order = "hclust", 
+            hclust.method = "centroid",
+            tl.cex = 0.8,
+            tl.col = "black", 
+            tl.srt = 45)
+## table with highly correlated values
+corTable <- setDT(melt(corMatrix))[order(-value)][value!=1] 
+corTableSalePrice <- corTable[Var1=="SalePrice",][order(-value)]
+(corTableHigh <- corTable[value > 0.7 | value < -0.70 ][order(Var1,-value)])
+## manually selection highly correlated variables to be removed during pre-processing
 variablesHighlyCorrelated <- c(
-  "GarageCond",     ## high correlation with GarageQual
-  "GarageYrBlt",    ## high correlation with GarageQual
+  "TotalBsmtSF",    ## high correlation	with FirstFlrSF
   "GarageArea",     ## high correlation GarageCars
   "TotRmsAbvGrd" ,  ## high correlation GrLivArea
-  "YearRemodAdd",   ## correlated with qualities and age 
-  "TotalBsmtSF",      ## correlated	with BsmtCond BsmtQual
-  "BsmtFinSF1"       ## correlated with 	BsmtFinType1
+  "GarageCond",     ## high correlation with GarageQual
+  "GarageYrBlt",    ## high correlation with GarageQual
+  "YearRemodAdd",   ## correlated with qualities and interaction variable age 
+  "BsmtFinSF1"      ## correlated with 	BsmtFinType1
 )
+
 ```
 
 # Feature engineering
@@ -373,6 +464,8 @@ full.dt[, ':=' (
 
 # Data preparation
 
+## Define features and response (target)
+
 ```{r}
 #### select features
 variablesDrop <- NA
@@ -381,34 +474,49 @@ features <- setdiff(names(full.dt), c(response,variablesDrop, variablesHighlyCor
 ```
 
 ```{r}
+#### create index for to split full data set into train and test
+setkey(full.dt,dataPartition)
+```
+
+## Deal with outliers
+
+```{r}
 ##### remove outliers
-outliersHigh.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200,Id]
+#require(broom)
+## method one: highest cooks distance of residuals
+#formula.all <- as.formula(paste("SalePrice ~ ", paste(features, collapse= "+")))
+#modelLm <- lm(formula.all, data = full.dt["train"])
+
+#outliersHigh.Id <- full.dt["train"]
+#outliersHigh.Id$cooksd <- augment(modelLm)[[".cooksd"]]
+#outliersHigh.Id <- outliersHigh.Id %>% arrange(desc(cooksd)) %>% head(10) %>% select(Id)
+## method two: manual selection based on visual inspection of the data
+#outliersHigh.Id <-  train.dt[GrLivArea > 4000 | LotArea > 100000 | X1stFlrSF > 3000 | GarageArea > 1200]
+outliersHigh.Id <-  train.dt[GrLivArea > 4000,Id ]
 full.dt <- full.dt[!(Id %in% outliersHigh.Id)]
 ```
 
-```{r}
-#### create index for to split full data set into train and test
-setkey(full.dt,dataPartition)
-train.full.dt <- full.dt["train"]
-```
+## Convert ordinal factors to integers
+
+Converting ordinal factors to integers gives a small performance boost when modelling glm and xgboost algorithms.
 
 ```{r}
-#### ordinal factors
-## convert ordinal factors to integers. It gives a small performance boost for glmnet and xgbTree.
 changeColType <- setDT(data.frame(sapply(full.dt,is.ordered)), keep.rownames = TRUE)[sapply.full.dt..is.ordered.==TRUE]$rn
 full.dt[,(changeColType):= lapply(.SD, as.integer), .SDcols = changeColType]
 ```
 
+## Log transform skewed variables
+
 ```{r}
-#### skewed variables
-## log transform skewed variables (including response variable)
-skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)})
+skewedVariables <- sapply(full.dt[, c(variablesSquareFootage,variablesValues), with = FALSE],function(x){skew(x,na.rm=TRUE)}) ## including response variable
 ## keep only features that exceed a threshold for skewness
 skewedVariables <- skewedVariables[skewedVariables > 0.50]
-## transform excessively skewed features with log
+## transform excessively skewed features with log1p
 skewedVariables <- names(skewedVariables)
 full.dt[, (skewedVariables) := lapply(.SD, function(x) log1p(x)), .SDcols = skewedVariables]
 ```
+
+## Scale numerical variables
 
 ```{r}
 #### scale
@@ -416,45 +524,57 @@ varScale <- setdiff(c(variablesSquareFootage, variablesValues), c(response)) ## 
 full.dt[, (varScale) := lapply(.SD, function(x) scale(x, center = T, scale = T)), .SDcols = varScale]
 ```
 
+## Split data into train and test
+
+Split in train and test after engineering. Split by key is fasted method.
+
 ```{r}
-## split in train and test after engineering. Split by key is fasted method.
 train.full.dt <- full.dt["train"]
 test.dt <- full.dt["test"]
 ## random split training into train and validate
-set.seed(333)
-n <- nrow(train.full.dt)
-shuffled.dt <- train.full.dt[sample(n), ]
-train_indices <- 1:round(0.8 * n)
-train.dt <- shuffled.dt[train_indices, ]
-validate_indices <- (round(0.8 * n) + 1):n
-validate.dt <- shuffled.dt[validate_indices, ]
+#set.seed(333)
+#n <- nrow(train.full.dt)
+#shuffled.dt <- train.full.dt[sample(n), ]
+#train_indices <- 1:round(0.8 * n)
+#train.dt <- shuffled.dt[train_indices, ]
+#validate_indices <- (round(0.8 * n) + 1):n
+#validate.dt <- shuffled.dt[validate_indices, ]
+```
+
+## One-hot encoding and remove factor levels with low frequency
+
+```{r}
+require(vtreat)
+treatplan <- designTreatmentsZ(train.full.dt, minFraction = 0.01, rareCount = 0, features, verbose = FALSE)
+train.full.treat <- prepare(treatplan, dframe = train.full.dt, codeRestriction = c("clean", "lev"))
+test.treat  <- prepare(treatplan, dframe = test.dt, codeRestriction = c("clean", "lev"))
 ```
 
 # Modeling
 
+## Train models
+
 ```{r}
-formula.all <- as.formula(paste("SalePrice ~ ", paste(features, collapse= "+")))
 trControl <- trainControl(
         method="cv",
         number=7,
         savePredictions="final",
-        index=createResample(train.dt$OverallQual, 7),  
+        index=createResample(train.full.dt$OverallQual, 7),  
         allowParallel =TRUE
 )
+xgbTreeGrid <- expand.grid(nrounds = 400, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1.0,  subsample = 1.0, min_child_weight = 4)
 glmnetGridElastic <- expand.grid(.alpha = 0.3, .lambda = 0.009) ## notice the . before the parameter
 glmnetGridLasso <- expand.grid(.alpha = 1, .lambda = seq(0.001,0.1,by = 0.001))
 glmnetGridRidge <- expand.grid(.alpha = 0, .lambda = seq(0.001,0.1,by = 0.001))
-xgbTreeGrid <- expand.grid(nrounds = 400, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1.0,  subsample = 1.0, min_child_weight = 4)
 set.seed(333)
 modelList <- caretList(
-                  formula.all, 
-                  data=train.dt,
+                  x = train.full.treat,
+                  y = train.full.dt$SalePrice,
                   trControl=trControl,
                   metric="RMSE",
                   tuneList=list(
                   ## Do not use custom names in list. Will give prediction error with greedy ensemble. Bug in caret.
                           xgbTree = caretModelSpec(method="xgbTree",  tuneGrid = xgbTreeGrid, nthread = 8),
-                          lm =   caretModelSpec(method="lm"),
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridElastic), ## Elastic 
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridLasso), ## Lasso
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridRidge) ## Ridge
@@ -462,31 +582,14 @@ modelList <- caretList(
 )
 ```
 
-# Evaluation
+## Model evaluation
 
 ```{r}
-xyplot(resamples(modelList))
 modelCor(resamples(modelList))
 summary(resamples(modelList))
-varImp(modelList$xgbTree)
-varImp(modelList$glmnet)
 ```
 
-```{r}
-#### residual analysis
-plot(train.dt$OverallQual, resid(modelList$glmnet), 
-       ylab="Residuals", xlab="Neigborhood", 
-       main="") 
-       abline(0, 0)                  
-     
-qqnorm(resid(modelList$glmnet), 
-                ylab="Standardized Residuals", 
-                xlab="Normal Scores", 
-                main="Q-Q plot residuals") 
-       qqline(resid(modelList$glmnet))
-```
-
-# Ensemble
+## Combine models into an ensemble
 
 ```{r}
 set.seed(333)
@@ -499,17 +602,50 @@ greedyEnsemble <- caretEnsemble(
 
 summary(greedyEnsemble)
 ```
+
+## Analyse residuals of ensemble
+
+```{r}
+tmp <- train.full.dt
+tmp$pred <- predict(greedyEnsemble, newdata = train.full.treat)
+tmp$residual <- tmp$SalePrice - tmp$pred
+
+ggplot(tmp, aes(x = pred, y = residual)) + 
+      geom_pointrange(aes(ymin = 0, ymax = residual)) + 
+      geom_hline(yintercept = 0, linetype = 3) + 
+      ggtitle("Residuals vs. model prediction") +
+      xlab("prediction") +
+      ylab("residual") +
+      theme(text = element_text(size=9)) 
+
+ggplot(tmp, aes(x = residual, y = OverallQual)) +
+      geom_point() + 
+      ggtitle("Residuals vs. overall quality") +
+      xlab("residual") +
+      ylab("overall quality") +
+      theme(text = element_text(size=9))      
+
+qqnorm(resid(greedyEnsemble$ens_model$finalModel), 
+                ylab="standardized Residuals", 
+                xlab="normal Scores", 
+                main="Q-Q plot residuals") 
+qqline(resid(greedyEnsemble$ens_model$finalModel))
+rm(tmp) ## clean up
+```
+
 # Predict and submit results
 
 ```{r}
 #### submit
-finalPredictions <- predict(greedyEnsemble, newdata=test.dt)
+finalPredictions <- predict(greedyEnsemble, newdata=test.treat)
 finalPredictions <- data.frame(finalPredictions)
 names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
 submission <- cbind(test.dt[, "Id"],finalPredictions)
 write.csv(x = submission, file = "submission.csv", row.names = F)
+#### save data for later use in other kernels
+write.csv(x = train.full.treat, file = "train.full.treat.csv", row.names = F)
+write.csv(x = test.treat, file = "test.treat.csv", row.names = F)
+write.csv(x = train.full.dt, file = "train.full.dt.csv", row.names = F)
+write.csv(x = test.dt, file = "test.dt.csv", row.names = F)
 ```
-
-
-
