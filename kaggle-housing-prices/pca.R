@@ -1,4 +1,17 @@
 ###################################################################
+#### Method one                                                ####
+###################################################################
+prinComp <- prcomp(train.full.treat, center = F, scale. = F)
+#compute standard deviation of each principal component
+std_dev <- prinComp$sdev
+#compute variance
+pr_var <- std_dev^2
+#proportion of variance explained
+prop_varex <- pr_var/sum(pr_var)
+# predict
+train.full.treat <- predict(prinComp, train.full.treat)
+test.treat <- predict(prinComp, test.treat)
+###################################################################
 #### Determine principle components on train data              ####
 ###################################################################
 tmp.dt <- train.dt[,c(features), with = F]

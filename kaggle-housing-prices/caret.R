@@ -7,7 +7,7 @@ require(doParallel)
 cluster <- makeCluster(detectCores())  # leave one for OS
 registerDoParallel(cluster)
 ## https://cran.r-project.org/web/packages/caretEnsemble/vignettes/caretEnsemble-intro.html
-my_control <- trainControl(
+trControl <- trainControl(
         method="cv",
         number=7,
         savePredictions="final",
@@ -29,6 +29,7 @@ features <- setdiff(features, c(
   "BsmtFinSF1"       ## correlated with 	BsmtFinType1
 ))
 
+
 #### Remove zero variance 
 #variablesZeroVariance <- nearZeroVar(train.dt, freqCut = 95/5, uniqueCut = 10, saveMetrics = FALSE,
 #                                     names = TRUE, foreach = FALSE, allowParallel = TRUE)
@@ -46,16 +47,16 @@ require(glmnet)
 # require(elasticnet)  ## enet
 # require(extraTrees)  ## extraTrees
 # require(e1071)  ## parRF
+#rfGrid <- expand.grid(.mtry = seq(35,65,by = 5))
 glmnetGridElastic <- expand.grid(.alpha = 0.3, .lambda = 0.009) ## notice the . before the parameter
 glmnetGridLasso <- expand.grid(.alpha = 1, .lambda = seq(0.001,0.1,by = 0.001))
 glmnetGridRidge <- expand.grid(.alpha = 0, .lambda = seq(0.001,0.1,by = 0.001))
 xgbTreeGrid <- expand.grid(nrounds = 400, max_depth = 3, eta = 0.1, gamma = 0, colsample_bytree = 1.0,  subsample = 1.0, min_child_weight = 4)
-#rfGrid <- expand.grid(.mtry = seq(35,65,by = 5))
 set.seed(333)
-model_list <- caretList(
+modelList <- caretList(
                   formula.all, 
                   data=train.dt,
-                  trControl=my_control,
+                  trControl=trControl,
                   metric="RMSE",
                   tuneList=list(
                           ## Do not use custom names in list. This will give prediction error with greedy ensemble. Bug in caret.
@@ -64,7 +65,6 @@ model_list <- caretList(
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridElastic), ## Elastic  , tuneLength = 6
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridLasso), ## Lasso
                           glmnet=caretModelSpec(method="glmnet", tuneGrid = glmnetGridRidge) ## Lasso
-                          
                           )
 )
 ####
@@ -107,8 +107,9 @@ greedy_ensemble <- caretEnsemble(
 summary(greedy_ensemble)
 #### 
 require(Metrics)
-rmse(log(expm1(validate.dt$SalePrice)), log(expm1(predict(greedy_ensemble, newdata=validate.dt))))
+rmse(validate.dt$SalePrice, predict(greedy_ensemble, newdata=validate.dt))
 
+## 0.11762
 
 
 

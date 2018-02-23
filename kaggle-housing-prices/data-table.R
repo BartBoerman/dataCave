@@ -96,6 +96,7 @@ variablesValues <- c(
 variablesFactor <- colnames(full.dt)[which(as.vector(full.dt[,sapply(full.dt, class)]) == "character")]
 variablesFactor <- setdiff(variablesFactor, "dataPartition") 
 variablesFactor <- c(variablesFactor,
+                     ## variables with data type integer which are factors
                      "MSSubClass",     ## Identifies the type of dwelling involved in the sale
                      "OverallQual",    ## Rates the overall material and finish of the house
                      "OverallCond"     ## Rates the overall condition of the house
@@ -153,11 +154,11 @@ findMode <- function(x) {
 full.dt[is.na(KitchenQual), KitchenQual := findMode(full.dt$KitchenQual) ] ## One record, set to Typical
 ## Garage
 full.dt[is.na(GarageFinish) & GarageType == "Detchd", ':=' (GarageFinish = "Fin",
-                                                        GarageCars = 1,
-                                                        GarageArea = 360,
-                                                        GarageYrBlt = YearBuilt,
-                                                        GarageQual = findMode(full.dt$GarageQual),
-                                                        GarageCond = findMode(full.dt$GarageCond))] 
+                                                            GarageCars = 1,
+                                                            GarageArea = 360,
+                                                            GarageYrBlt = YearBuilt,
+                                                            GarageQual = findMode(full.dt$GarageQual),
+                                                            GarageCond = findMode(full.dt$GarageCond))] 
 full.dt[is.na(GarageFinish), GarageFinish := "None"]
 full.dt[is.na(GarageQual), GarageQual := "None"]
 full.dt[is.na(GarageCond), GarageCond := "None"]

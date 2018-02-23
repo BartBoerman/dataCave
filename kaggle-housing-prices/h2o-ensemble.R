@@ -198,12 +198,13 @@ h2o.exportFile(submission, path = "/home/bart/submission.h2o.ensembleGlm.csv", f
 #### Automated machine learning                                ####
 ###################################################################
 autoMl <- h2o.automl(
-  training_frame =  train.hex, 
-  validation_frame = validate.hex,    
+  training_frame =  train.hex,
+  # validation_frame = 
+  leaderboard_frame = validate.hex,    
   x=features,                        ## the predictor columns, by column index
   y=response,                          ## the target index (what we are predicting)
-  nfolds = 3,
-  max_runtime_secs = (60*60*3),
+  nfolds = 5,
+  max_runtime_secs =  300, #(60*60*3),
   stopping_rounds = 3,
   stopping_tolerance = 0.001,
   stopping_metric = "RMSLE",
@@ -222,6 +223,11 @@ names(finalPredictions) <- "SalePrice"
 finalPredictions$SalePrice <- expm1(finalPredictions$SalePrice) 
 submission <- h2o.cbind(test.hex[, "Id"],finalPredictions)
 h2o.exportFile(submission, path = "/home/bart/submission.h2o.autoMl.csv", force = T)
+
+gbmAuto <- h2o.getModel("GBM_grid_0_AutoML_20180127_195225_model_90")
+glmAuto <- h2o.getModel("GLM_grid_0_AutoML_20180127_195225_model_0")
+stackBestOff <- h2o.getModel("StackedEnsemble_BestOfFamily_0_AutoML_20180127_195225")
+stackAll <- h2o.getModel("StackedEnsemble_AllModels_0_AutoML_20180127_195225")
 
 
 ###################################################################

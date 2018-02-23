@@ -12,6 +12,8 @@ houseStyle.bin <- c("1Story" = "1Story",
 full.dt[, ':=' (
                 isRemodeled = ifelse(YearRemodAdd == YearBuilt, 1, 0),
                 isNew       = ifelse(YrSold       == YearBuilt, 1, 0),
+                overallQualGood    = ifelse(as.integer(OverallQual) - 5 < 0, 0, as.integer(OverallQual) - 5),
+                overallQualBad     = ifelse(5 - as.integer(OverallQual) < 0, 0, 5 - as.integer(OverallQual)),
                 sfPorch = EnclosedPorch + ThreeSsnPorch + ScreenPorch,
                 sfTotal     = (TotalBsmtSF + FirstFlrSF + SecondFlrSF),  
                 hasUnfinishedLevel= ifelse(HouseStyle %in% c("1.5Unf","2.5Unf"),1,0),
